@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Phân tích Giao hàng</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Nhúng thư viện Chart.js để vẽ biểu đồ -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #f4f6f9;
+        }
+
+        .card-kpi {
+            border-left: 5px solid #0d6efd;
+        }
+    </style>
+
+<body>
+
+    <!-- Thanh điều hướng -->
+    <a href="users.html" class="btn btn-outline-light btn-sm me-2">Quản lý Users</a>
+    <a href="reports.html" class="btn btn-outline-light btn-sm me-2">Báo cáo & Backup</a>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-4">
+        <a class="navbar-brand" href="dashboard.html">Hệ Thống Giao Hàng</a>
+        <div class="ms-auto d-flex align-items-center">
+            <a href="orders.html" class="btn btn-outline-light btn-sm me-2">Quản lý Đơn hàng</a>
+            <a href="predict.html" class="btn btn-outline-success btn-sm me-2">Dự đoán AI</a>
+            <a href="users.html" class="btn btn-outline-info btn-sm me-2">Quản lý Users</a>
+            <a href="reports.html" class="btn btn-outline-warning btn-sm me-3">Báo cáo & Backup</a>
+
+            <span class="text-white me-3 border-start ps-3">Xin chào, Admin!</span>
+            <a href="index.html" class="btn btn-danger btn-sm">Đăng xuất</a>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h2 class="mb-4">Tổng quan Hệ thống</h2>
+
+        <!-- Phần KPI (Các con số thống kê) -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card card-kpi shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title text-muted">Tổng số đơn hàng</h5>
+                        <h2 class="fw-bold">1,200</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-kpi shadow-sm" style="border-left-color: #198754;">
+                    <div class="card-body">
+                        <h5 class="card-title text-muted">Thời gian giao (TB)</h5>
+                        <h2 class="fw-bold">130 <span class="fs-5 fw-normal">phút</span></h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-kpi shadow-sm" style="border-left-color: #dc3545;">
+                    <div class="card-body">
+                        <h5 class="card-title text-muted">Đơn giao trễ (Dự kiến)</h5>
+                        <h2 class="fw-bold text-danger">15%</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Phần Biểu đồ -->
+        <div class="row">
+            <div class="col-md-8 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white fw-bold">
+                        Thời gian giao hàng theo loại Phương tiện
+                    </div>
+                    <div class="card-body">
+                        <!-- Thẻ canvas để Chart.js vẽ biểu đồ vào đây -->
+                        <canvas id="vehicleChart" height="100"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white fw-bold">
+                        Phân bố Mức độ Giao thông
+                    </div>
+                    <div class="card-body">
+                        <canvas id="trafficChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Code vẽ biểu đồ -->
+    <script src="js/dashboard.js" defer></script>
+</body>
+
+</html>

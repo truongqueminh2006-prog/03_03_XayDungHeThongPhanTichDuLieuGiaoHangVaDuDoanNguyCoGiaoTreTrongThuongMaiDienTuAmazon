@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập - Hệ thống Phân tích Giao hàng</title>
+    <!-- Nhúng thư viện Bootstrap 5 để giao diện đẹp tự động -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f4f6f9;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            background-color: white;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="login-card">
+        <h3 class="text-center mb-4">Đăng Nhập Hệ Thống</h3>
+
+        <!-- Form đăng nhập -->
+        <form id="loginForm">
+            <div class="mb-3">
+                <label for="username" class="form-label">Tên đăng nhập</label>
+                <input type="text" class="form-control" id="username" placeholder="Nhập tài khoản...">
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">Mật khẩu</label>
+                <input type="password" class="form-control" id="password" placeholder="Nhập mật khẩu...">
+            </div>
+
+            <!-- Vùng hiển thị lỗi -->
+            <div id="errorMessage" class="text-danger mb-3" style="display: none;"></div>
+
+            <button type="submit" class="btn btn-primary w-100">Đăng nhập</button>
+        </form>
+    </div>
+
+    <!-- Script xử lý đăng nhập -->
+    <script src="js/auth.js" defer></script>
+</body>
+
+</html>
