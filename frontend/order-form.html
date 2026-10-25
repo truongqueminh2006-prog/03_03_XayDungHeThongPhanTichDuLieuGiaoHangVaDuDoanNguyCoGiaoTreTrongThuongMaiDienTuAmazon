@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thêm Đơn Hàng Mới</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f4f6f9;
+        }
+    </style>
+    <!-- Thư viện Flatpickr -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+</head>
+
+<body>
+
+    <!-- Thanh Menu (Copy từ orders.html) -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-4 py-3">
+        <div class="container-fluid d-flex flex-column align-items-start">
+            <a class="navbar-brand fw-bold fs-5 mb-2 text-wrap" href="dashboard.html" style="max-width: 100%;">
+                Hệ thống Phân tích Dữ liệu Giao hàng và Dự đoán Nguy cơ Giao trễ trong Thương mại Điện tử
+                Amazon
+            </a>
+            <div class="d-flex w-100 justify-content-between align-items-center mt-2 border-top border-secondary pt-2">
+                <div>
+                    <a href="orders.html" class="btn btn-outline-light btn-sm me-2">Quản lý Đơn hàng</a>
+                    <a href="predict.html" class="btn btn-outline-success btn-sm me-2">Dự đoán AI</a>
+                    <a href="users.html" class="btn btn-outline-info btn-sm me-2">Quản lý Users</a>
+                    <a href="reports.html" class="btn btn-outline-warning btn-sm">Báo cáo & Backup</a>
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="text-white me-3 border-start ps-3">Xin chào, Admin!</span>
+                    <a href="index.html" class="btn btn-danger btn-sm">Đăng xuất</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Nội dung Form -->
+    <div class="container mt-4 mb-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0" id="formTitle">Thêm Đơn Hàng Mới</h4>
+                    </div>
+                    <div class="card-body p-4">
+                        <!-- Vùng hiển thị lỗi -->
+                        <div id="formError" class="alert alert-danger" style="display: none;"></div>
+                        <form id="orderForm">
+                            <input type="hidden" id="isEditMode" value="false">
+                            <!-- Mã đơn hàng -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Mã đơn hàng (Order_ID)</label>
+                                <input type="text" class="form-control" id="orderId" placeholder="VD: ialx566343618"
+                                    required>
+                            </div>
+                            <div class="row mb-3">
+                                <!-- Ngày đặt hàng -->
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">
+                                        Ngày đặt hàng (DD/MM/YYYY)
+                                    </label>
+                                    <input type="text" class="form-control" id="orderDate" placeholder="DD/MM/YYYY"
+                                        autocomplete="off" required>
+                                </div>
+                                <!-- Tuổi Agent -->
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Tuổi người giao (Agent Age)</label>
+                                    <input type="number" class="form-control" id="agentAge" min="18" max="60" value="30"
+                                        required>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <!-- Đánh giá -->
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Đánh giá (Rating: 1-5)</label>
+                                    <input type="number" class="form-control" id="agentRating" step="0.1" min="1"
+                                        max="5" value="4.5" required>
+                                </div>
+                                <!-- Giao thông -->
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Mức độ Giao thông</label>
+                                    <select class="form-select" id="traffic" required>
+                                        <option value="Low">Low (Thông thoáng)</option>
+                                        <option value="Medium">Medium (Bình thường)</option>
+                                        <option value="High">High (Đông đúc)</option>
+                                        <option value="Jam">Jam (Kẹt xe)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row mb-4">
+                                <!-- Phương tiện -->
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Phương tiện</label>
+                                    <select class="form-select" id="vehicle" required>
+                                        <option value="Scooter">Scooter (Xe máy)</option>
+                                        <option value="Van">Van (Xe tải nhỏ)</option>
+                                    </select>
+                                </div>
+                                <!-- Thời gian giao -->
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Thời gian giao (Phút)</label>
+                                    <input type="number" class="form-control" id="deliveryTime" min="1" value="120"
+                                        required>
+                                </div>
+                            </div>
+                            <!-- Nút bấm -->
+                            <div class="d-flex justify-content-between mt-4">
+                                <a href="orders.html" class="btn btn-secondary px-4">Hủy bỏ</a>
+                                <button type="submit" class="btn btn-primary px-4">💾 Lưu Đơn Hàng</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
+    <script src="js/auth-check.js" defer></script>
+    <script src="js/order-form.js" defer></script>
+</body>
+
+</html>

@@ -1,10 +1,22 @@
-// Kiểm tra đăng nhập
+// 1. KIỂM TRA ĐĂNG NHẬP VÀ PHÂN QUYỀN
+// Kiểm tra xem đã đăng nhập chưa
 if (!localStorage.getItem('token')) {
-    alert('Bạn chưa đăng nhập!');
+    alert('Bạn chưa đăng nhập! Vui lòng đăng nhập lại.');
     window.location.href = 'index.html';
+    throw new Error("Chưa đăng nhập");
 }
 
-// 1. Chức năng Xuất báo cáo CSV (Giả lập tạo file)
+// Lấy quyền (role) từ localStorage
+const userRole = localStorage.getItem('role');
+
+// Nếu không phải admin thì chặn lại
+if (userRole !== 'admin') {
+    alert('Bạn không có quyền truy cập trang này! Chỉ Admin mới được vào.');
+    window.location.href = 'dashboard.html';
+    throw new Error("Không có quyền Admin");
+}
+
+// 2. CHỨC NĂNG XUẤT BÁO CÁO CSV (Giả lập)
 document.getElementById('btnExport').addEventListener('click', function () {
     // Tạo dữ liệu giả lập dạng CSV
     const csvContent = "Order_ID,Ngay_dat,Giao_thong,Thoi_gian_giao\n" +
@@ -23,10 +35,10 @@ document.getElementById('btnExport').addEventListener('click', function () {
     link.click();
     document.body.removeChild(link);
 
-    alert("Đã tải xuống file báo cáo thành công!");
+    alert("✅ Đã tải xuống file báo cáo thành công!");
 });
 
-// 2. Chức năng Backup
+// 3. CHỨC NĂNG BACKUP (Giả lập)
 document.getElementById('btnBackup').addEventListener('click', function () {
     if (confirm("Bạn có chắc chắn muốn sao lưu toàn bộ dữ liệu không?")) {
         // Giả lập gọi API của TV3 để chạy lệnh mongodump
@@ -36,7 +48,7 @@ document.getElementById('btnBackup').addEventListener('click', function () {
     }
 });
 
-// 3. Chức năng Restore
+// 4. CHỨC NĂNG RESTORE (Giả lập)
 document.getElementById('btnRestore').addEventListener('click', function () {
     const fileInput = document.getElementById('restoreFile');
     if (fileInput.files.length === 0) {

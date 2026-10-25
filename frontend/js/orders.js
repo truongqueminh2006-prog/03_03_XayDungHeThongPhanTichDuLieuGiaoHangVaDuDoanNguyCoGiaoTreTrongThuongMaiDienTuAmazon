@@ -1,14 +1,17 @@
-// 1. Dữ liệu mẫu (Mock Data lấy từ file CSV của TV1)
-const allOrders = [
-    { id: "ialx566343618", date: "2022-03-19", age: 37, rating: 4.9, traffic: "High", vehicle: "Van", time: 120 },
-    { id: "akqg208421122", date: "2022-03-25", age: 34, rating: 4.5, traffic: "Jam", vehicle: "Scooter", time: 165 },
-    { id: "njpu434582536", date: "2022-03-19", age: 23, rating: 4.4, traffic: "Low", vehicle: "Scooter", time: 130 },
-    { id: "rjto796129700", date: "2022-04-05", age: 38, rating: 4.7, traffic: "Medium", vehicle: "Scooter", time: 105 },
-    { id: "zguw716275638", date: "2022-03-26", age: 32, rating: 4.6, traffic: "High", vehicle: "Scooter", time: 150 },
-    { id: "fxuu788413734", date: "2022-03-11", age: 22, rating: 4.8, traffic: "Jam", vehicle: "Scooter", time: 130 },
-    { id: "njmo150975311", date: "2022-03-04", age: 33, rating: 4.7, traffic: "Jam", vehicle: "Scooter", time: 200 },
-    { id: "jvjc772545076", date: "2022-03-14", age: 35, rating: 4.6, traffic: "Medium", vehicle: "Scooter", time: 160 }
-];
+// 1. Lấy dữ liệu từ localStorage. Nếu chưa có (lần đầu mở), dùng dữ liệu mẫu
+let allOrders = JSON.parse(localStorage.getItem('ordersData'));
+
+if (!allOrders) {
+    // Dữ liệu mẫu ban đầu
+    allOrders = [
+        { id: "ialx566343618", date: "2022-03-19", age: 37, rating: 4.9, traffic: "High", vehicle: "Van", time: 120 },
+        { id: "akqg208421122", date: "2022-03-25", age: 34, rating: 4.5, traffic: "Jam", vehicle: "Scooter", time: 165 },
+        { id: "njpu434582536", date: "2022-03-19", age: 23, rating: 4.4, traffic: "Low", vehicle: "Scooter", time: 130 },
+        { id: "rjto796129700", date: "2022-04-05", age: 38, rating: 4.7, traffic: "Medium", vehicle: "Scooter", time: 105 }
+    ];
+    // Lưu dữ liệu mẫu vào localStorage
+    localStorage.setItem('ordersData', JSON.stringify(allOrders));
+}
 
 // 2. Hàm hiển thị dữ liệu ra bảng
 function renderTable(data) {
@@ -38,8 +41,8 @@ function renderTable(data) {
                         <td>${order.vehicle}</td>
                         <td>${order.time}</td>
                         <td>
-                            <button class="btn btn-sm btn-info text-white" onclick="alert('Xem chi tiết đơn: ${order.id}')">Xem</button>
-                            <button class="btn btn-sm btn-warning" onclick="alert('Sửa đơn: ${order.id}')">Sửa</button>
+                            <button class="btn btn-sm btn-info text-white" onclick="viewOrder('${order.id}')">Xem</button>
+                            <button class="btn btn-sm btn-warning" onclick="editOrder('${order.id}')">Sửa</button>
                             <button class="btn btn-sm btn-danger" onclick="deleteOrder('${order.id}')">Xóa</button>
                         </td>
                     </tr>
@@ -81,3 +84,28 @@ function deleteOrder(id) {
 
 // 6. Chạy hiển thị bảng lần đầu khi mở trang
 renderTable(allOrders);
+function editOrder(id) {
+    window.location.href = `order-form.html?id=${id}`;
+}
+
+function viewOrder(id) {
+    const order = allOrders.find(o => o.id === id);
+    if (!order) return;
+
+    document.getElementById('modalOrderId').innerText = order.id;
+    // Đổi ngày hiển thị sang VN
+    if (order.date) {
+        const [y, m, d] = order.date.split('-');
+        document.getElementById('modalOrderDate').innerText = `${d}/${m}/${y}`;
+    } else {
+        document.getElementById('modalOrderDate').innerText = "";
+    }
+    document.getElementById('modalAgentAge').innerText = order.age;
+    document.getElementById('modalAgentRating').innerText = order.rating;
+    document.getElementById('modalTraffic').innerText = order.traffic;
+    document.getElementById('modalVehicle').innerText = order.vehicle;
+    document.getElementById('modalDeliveryTime').innerText = order.time + " phút";
+
+    const modal = new bootstrap.Modal(document.getElementById('orderDetailModal'));
+    modal.show();
+}

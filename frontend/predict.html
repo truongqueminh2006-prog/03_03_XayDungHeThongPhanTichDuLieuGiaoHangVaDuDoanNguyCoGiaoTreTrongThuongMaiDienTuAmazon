@@ -20,15 +20,32 @@
 <body>
 
     <!-- Thanh điều hướng -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-4">
-        <a class="navbar-brand" href="dashboard.html">Hệ Thống Giao Hàng</a>
-        <div class="ms-auto">
-            <a href="dashboard.html" class="btn btn-outline-light btn-sm me-2">Về Dashboard</a>
-            <a href="index.html" class="btn btn-outline-danger btn-sm">Đăng xuất</a>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-4 py-3">
+        <div class="container-fluid d-flex flex-column align-items-start">
+            <!-- Hàng 1: Tên đề tài -->
+            <a class="navbar-brand fw-bold fs-5 mb-2 text-wrap" href="dashboard.html" style="max-width: 100%;">
+                Hệ thống Phân tích Dữ liệu Giao hàng và Dự đoán Nguy cơ Giao trễ trong Thương mại Điện tử
+                Amazon
+            </a>
+
+            <!-- Hàng 2: Các nút chức năng -->
+            <div class="d-flex w-100 justify-content-between align-items-center mt-2 border-top border-secondary pt-2">
+                <div>
+                    <a href="orders.html" class="btn btn-outline-light btn-sm me-2">Quản lý Đơn hàng</a>
+                    <a href="predict.html" class="btn btn-outline-success btn-sm me-2">Dự đoán AI</a>
+                    <a href="users.html" class="btn btn-outline-info btn-sm me-2">Quản lý Users</a>
+                    <a href="reports.html" class="btn btn-outline-warning btn-sm">Báo cáo & Backup</a>
+                </div>
+
+                <div class="d-flex align-items-center">
+                    <span class="text-white me-3 border-start ps-3">Xin chào, Admin!</span>
+                    <a href="index.html" class="btn btn-danger btn-sm">Đăng xuất</a>
+                </div>
+            </div>
         </div>
     </nav>
 
-    <div class="container mt-5">
+    <div class="container-fluid px-4 mt-4">
         <div class="row justify-content-center">
             <div class="col-md-8">
                 <div class="card shadow">
@@ -106,6 +123,7 @@
     </div>
 
     <!-- Gọi file JS xử lý -->
+     <script src="js/auth-check.js" defer></script>
     <script src="js/predict.js" defer></script>
 </body>
 
