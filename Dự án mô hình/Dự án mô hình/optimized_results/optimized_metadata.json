@@ -1,0 +1,49 @@
+{
+  "selected_model": "Optimized",
+  "features": [
+    "Agent_Age",
+    "Agent_Rating",
+    "order_hour",
+    "day_of_week",
+    "is_weekend",
+    "distance_haversine_km",
+    "api_temperature_2m_c",
+    "api_precipitation_mm",
+    "api_wind_speed_10m_kmh",
+    "Traffic",
+    "Vehicle_scooter",
+    "Vehicle_van",
+    "Area_Other",
+    "Area_Semi-Urban",
+    "Area_Urban",
+    "Category_Books",
+    "Category_Clothing",
+    "Category_Cosmetics",
+    "Category_Electronics",
+    "Category_Grocery",
+    "Category_Home",
+    "Category_Jewelry",
+    "Category_Kitchen",
+    "Category_Outdoors",
+    "Category_Pet Supplies",
+    "Category_Shoes",
+    "Category_Skincare",
+    "Category_Snacks",
+    "Category_Sports",
+    "Category_Toys"
+  ],
+  "target": "Delivery_Time",
+  "unit": "minutes",
+  "best_search_params": {
+    "model__n_estimators": 200,
+    "model__min_samples_split": 5,
+    "model__min_samples_leaf": 2,
+    "model__max_features": 0.7,
+    "model__max_depth": 8
+  },
+  "test_metrics": {
+    "MAE": 23.638494840209678,
+    "RMSE": 30.762662794300393,
+    "R2": 0.6540649932140943
+  }
+}

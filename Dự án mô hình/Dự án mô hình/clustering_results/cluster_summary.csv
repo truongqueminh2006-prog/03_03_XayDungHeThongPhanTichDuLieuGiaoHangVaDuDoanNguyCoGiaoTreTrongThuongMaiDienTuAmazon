@@ -1,0 +1,3 @@
+﻿Cluster,Total_Orders,Avg_Delivery_Time,Median_Delivery_Time,Avg_Distance,Avg_Order_Hour,Avg_Temperature,Avg_Precipitation,Avg_Wind_Speed
+0,27905,132.331,130.0,12.186,20.116,25.991,0.005,10.398
+1,12092,108.414,110.0,3.997,11.206,30.143,0.004,10.1
