@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phân tích khu vực và phương tiện</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            background: #f4f6f9;
+            font-family: Arial, sans-serif;
+        }
+
+        .navbar {
+            background: #343a40;
+        }
+
+        .page-title {
+            font-weight: 700;
+            color: #333;
+        }
+
+        .filter-card,
+        .kpi-card,
+        .chart-card,
+        .matrix-card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            height: 100%;
+        }
+
+        .kpi-card {
+            border-left: 5px solid #ad5128;
+        }
+
+        .kpi-label {
+            color: #70402d;
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .kpi-value {
+            color: #262626;
+            font-size: 27px;
+            font-weight: 700;
+            margin-top: 8px;
+        }
+
+        .chart-title {
+            font-weight: 700;
+            color: #70371e;
+            font-size: 17px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 310px;
+        }
+
+        .matrix-table th {
+            background: #783b20;
+            color: white;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .matrix-table td {
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .matrix-table tfoot td {
+            background: #ad5128;
+            color: white;
+            font-weight: 700;
+        }
+
+        .filter-status {
+            font-size: 14px;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .chart-container {
+                height: 270px;
+            }
+
+            .kpi-value {
+                font-size: 23px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Thanh điều hướng -->
+    <nav class="navbar navbar-dark px-4 py-3">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="dashboard.html">
+                AMAZON DELIVERY ANALYTICS
+            </a>
+
+            <div class="d-flex flex-wrap gap-2">
+                <a href="dashboard.html" class="btn btn-outline-light btn-sm">
+                    Tổng quan
+                </a>
+                <a href="orders.html" class="btn btn-outline-light btn-sm">
+                    Đơn hàng
+                </a>
+                <a href="predict.html" class="btn btn-outline-success btn-sm">
+                    Dự đoán AI
+                </a>
+                <a href="reports.html" class="btn btn-outline-warning btn-sm">
+                    Báo cáo
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container-fluid px-4 py-4">
+
+        <h3 class="page-title mb-4">
+            PHÂN TÍCH THEO KHU VỰC VÀ PHƯƠNG TIỆN
+        </h3>
+
+        <!-- Bộ lọc -->
+        <div class="card filter-card mb-4">
+            <div class="card-body">
+                <div class="row align-items-end g-3">
+
+                    <div class="col-md-3">
+                        <label for="startDate" class="form-label fw-bold">
+                            Từ ngày
+                        </label>
+                        <input type="date" id="startDate" class="form-control" min="2022-02-11" max="2022-04-06"
+                            value="2022-02-11">
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="endDate" class="form-label fw-bold">
+                            Đến ngày
+                        </label>
+                        <input type="date" id="endDate" class="form-control" min="2022-02-11" max="2022-04-06"
+                            value="2022-04-06">
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="areaFilter" class="form-label fw-bold">
+                            Khu vực
+                        </label>
+                        <select id="areaFilter" class="form-select">
+                            <option value="">Tất cả khu vực</option>
+                            <option value="Metropolitan">Metropolitan</option>
+                            <option value="Other">Other</option>
+                            <option value="Semi-Urban">Semi-Urban</option>
+                            <option value="Urban">Urban</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3 d-flex gap-2">
+                        <button id="applyFilters" class="btn btn-primary flex-fill">
+                            Áp dụng
+                        </button>
+                        <button id="resetFilters" class="btn btn-secondary flex-fill">
+                            Đặt lại
+                        </button>
+                    </div>
+
+                </div>
+
+                <div id="filterStatus" class="filter-status mt-3">
+                    Đang tải dữ liệu...
+                </div>
+            </div>
+        </div>
+
+        <!-- Ba KPI -->
+        <div class="row g-3 mb-4">
+
+            <div class="col-md-4">
+                <div class="card kpi-card">
+                    <div class="card-body text-center">
+                        <div class="kpi-label">Khu Vực Giao Nhanh Nhất</div>
+                        <div id="fastestArea" class="kpi-value">--</div>
+                        <small id="fastestAreaDetail" class="text-muted">
+                            Thời gian giao trung bình
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card kpi-card">
+                    <div class="card-body text-center">
+                        <div class="kpi-label">Phương Tiện Giao Nhanh Nhất</div>
+                        <div id="fastestVehicle" class="kpi-value">--</div>
+                        <small id="fastestVehicleDetail" class="text-muted">
+                            Thời gian giao trung bình
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card kpi-card">
+                    <div class="card-body text-center">
+                        <div class="kpi-label">Khoảng Cách Trung Bình Theo Đơn</div>
+                        <div id="averageDistance" class="kpi-value">--</div>
+                        <small class="text-muted">Kilomet (km)</small>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Biểu đồ cơ cấu phương tiện -->
+        <div class="row g-3 mb-4">
+
+            <div class="col-lg-6">
+                <div class="card chart-card">
+                    <div class="card-body">
+                        <h5 class="chart-title text-center mb-3">
+                            Tỷ Lệ Cơ Cấu Phương Tiện Theo Khu Vực
+                        </h5>
+                        <div class="chart-container">
+                            <canvas id="vehicleCompositionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Biểu đồ theo khu vực -->
+            <div class="col-lg-6">
+                <div class="card chart-card">
+                    <div class="card-body">
+                        <h5 class="chart-title text-center mb-3">
+                            Thời Gian Giao Hàng & Khoảng Cách Theo Khu Vực
+                        </h5>
+                        <div class="chart-container">
+                            <canvas id="areaAnalysisChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Bảng ma trận -->
+        <div class="card matrix-card mb-4">
+            <div class="card-body">
+                <h5 class="chart-title text-center mb-3">
+                    Thời Gian Giao Trung Bình Theo Khu Vực & Phương Tiện
+                </h5>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped matrix-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Khu vực</th>
+                                <th>Motorcycle</th>
+                                <th>Scooter</th>
+                                <th>Van</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="matrixTableBody">
+                            <tr>
+                                <td colspan="5" class="text-center">
+                                    Đang tải dữ liệu...
+                                </td>
+                            </tr>
+                        </tbody>
+
+                        <tfoot id="matrixTableFooter"></tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script src="js/auth-check.js" defer></script>
+    <script src="js/area-vehicle.js" defer></script>
+
+</body>
+
+</html>

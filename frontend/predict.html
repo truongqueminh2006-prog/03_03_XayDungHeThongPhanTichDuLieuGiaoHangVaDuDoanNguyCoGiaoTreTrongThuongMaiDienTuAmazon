@@ -81,9 +81,10 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Phương tiện (Vehicle)</label>
-                                    <select class="form-select" id="vehicle">
-                                        <option value="Scooter">Scooter (Xe máy)</option>
-                                        <option value="Van">Van (Xe tải nhỏ)</option>
+                                    <select class="form-select" id="vehicle" required>
+                                        <option value="scooter">Scooter (Xe máy)</option>
+                                        <option value="van">Van (Xe tải nhỏ)</option>
+                                        <option value="motorcycle">Motorcycle (Xe mô tô)</option>
                                     </select>
                                 </div>
                             </div>
@@ -96,11 +97,50 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Khu vực (Area)</label>
-                                    <select class="form-select" id="area">
+                                    <select class="form-select" id="area" required>
                                         <option value="Urban">Urban (Thành thị)</option>
                                         <option value="Semi-Urban">Semi-Urban (Bán thành thị)</option>
                                         <option value="Other">Other (Khác)</option>
+                                        <option value="Metropolitan">Metropolitan (Đô thị lớn)</option>
                                     </select>
+                                </div>
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Danh mục hàng hóa (Category)</label>
+                                        <select class="form-select" id="category" required>
+                                            <option value="Books">Books</option>
+                                            <option value="Clothing">Clothing</option>
+                                            <option value="Cosmetics">Cosmetics</option>
+                                            <option value="Electronics">Electronics</option>
+                                            <option value="Grocery">Grocery</option>
+                                            <option value="Home">Home</option>
+                                            <option value="Jewelry">Jewelry</option>
+                                            <option value="Kitchen">Kitchen</option>
+                                            <option value="Outdoors">Outdoors</option>
+                                            <option value="Pet Supplies">Pet Supplies</option>
+                                            <option value="Shoes">Shoes</option>
+                                            <option value="Skincare">Skincare</option>
+                                            <option value="Snacks">Snacks</option>
+                                            <option value="Sports">Sports</option>
+                                            <option value="Toys">Toys</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="row mb-4">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Nhiệt độ (°C)</label>
+                                        <input type="number" class="form-control" id="temperature" step="0.1" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Lượng mưa (mm)</label>
+                                        <input type="number" class="form-control" id="precipitation" min="0" step="0.1"
+                                            required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Tốc độ gió (km/h)</label>
+                                        <input type="number" class="form-control" id="windSpeed" min="0" step="0.1"
+                                            required>
+                                    </div>
                                 </div>
                             </div>
 
@@ -123,7 +163,7 @@
     </div>
 
     <!-- Gọi file JS xử lý -->
-     <script src="js/auth-check.js" defer></script>
+    <script src="js/auth-check.js" defer></script>
     <script src="js/predict.js" defer></script>
 </body>
 

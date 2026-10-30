@@ -5,9 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Phân tích Giao hàng</title>
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Nhúng thư viện Chart.js để vẽ biểu đồ -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
         body {
             background-color: #f4f6f9;
@@ -16,23 +17,31 @@
         .card-kpi {
             border-left: 5px solid #0d6efd;
         }
+
+        .chart-card {
+            height: 100%;
+        }
+
+        .chart-container {
+            position: relative;
+            min-height: 300px;
+        }
     </style>
+</head>
 
 <body>
 
     <!-- Thanh điều hướng -->
-    <a href="users.html" class="btn btn-outline-light btn-sm me-2">Quản lý Users</a>
-    <a href="reports.html" class="btn btn-outline-light btn-sm me-2">Báo cáo & Backup</a>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-4 py-3">
         <div class="container-fluid d-flex flex-column align-items-start">
-            <!-- Hàng 1: Tên đề tài -->
+
             <a class="navbar-brand fw-bold fs-5 mb-2 text-wrap" href="dashboard.html" style="max-width: 100%;">
-                Hệ thống Phân tích Dữ liệu Giao hàng và Dự đoán Nguy cơ Giao trễ trong Thương mại Điện tử
-                Amazon
+                Hệ thống Phân tích Dữ liệu Giao hàng và Dự đoán Nguy cơ Giao trễ trong Thương mại Điện tử Amazon
             </a>
 
-            <!-- Hàng 2: Các nút chức năng -->
-            <div class="d-flex w-100 justify-content-between align-items-center mt-2 border-top border-secondary pt-2">
+            <div
+                class="d-flex w-100 justify-content-between align-items-center mt-2 border-top border-secondary pt-2 flex-wrap gap-2">
+
                 <div>
                     <a href="orders.html" class="btn btn-outline-light btn-sm me-2">Quản lý Đơn hàng</a>
                     <a href="predict.html" class="btn btn-outline-success btn-sm me-2">Dự đoán AI</a>
@@ -41,7 +50,9 @@
                 </div>
 
                 <div class="d-flex align-items-center">
-                    <span class="text-white me-3 border-start ps-3">Xin chào, Admin!</span>
+                    <span id="userGreeting" class="text-white me-3 border-start ps-3">
+                        Xin chào, Thành viên!
+                    </span>
                     <a href="index.html" class="btn btn-danger btn-sm">Đăng xuất</a>
                 </div>
             </div>
@@ -49,65 +60,691 @@
     </nav>
 
     <div class="container-fluid px-4 mt-4">
+
         <h2 class="mb-4">Tổng quan Hệ thống</h2>
+        <!-- DIEU HUONG 5 PHAN POWER BI -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
 
-        <!-- Phần KPI (Các con số thống kê) -->
-        <div class="row mb-4">
-            <div class="col-md-4">
-                <div class="card card-kpi shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title text-muted">Tổng số đơn hàng</h5>
-                        <h2 class="fw-bold">1,200</h2>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card card-kpi shadow-sm" style="border-left-color: #198754;">
-                    <div class="card-body">
-                        <h5 class="card-title text-muted">Thời gian giao (TB)</h5>
-                        <h2 class="fw-bold">130 <span class="fs-5 fw-normal">phút</span></h2>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card card-kpi shadow-sm" style="border-left-color: #dc3545;">
-                    <div class="card-body">
-                        <h5 class="card-title text-muted">Đơn giao trễ (Dự kiến)</h5>
-                        <h2 class="fw-bold text-danger">15%</h2>
-                    </div>
+                    <button class="btn btn-primary report-tab active" data-target="section1">
+                        01. Tổng quan
+                    </button>
+
+                    <button class="btn btn-outline-primary report-tab" data-target="section2">
+                        02. Phân tích chiều sâu thời và khoảng cách
+                    </button>
+
+                    <button class="btn btn-outline-primary report-tab" data-target="section3">
+                        03. Phân tích theo khu vực và phương tiện vận chuyển
+                    </button>
+
+                    <button class="btn btn-outline-primary report-tab" data-target="section4">
+                        04. Dự đoán nguy cơ giao trễ bằng Machine Learning
+                    </button>
+
+                    <button class="btn btn-outline-primary report-tab" data-target="section5">
+                        05. Đánh giá & tối ưu mô hình dự đoán
+                    </button>
+
                 </div>
             </div>
         </div>
 
-        <!-- Phần Biểu đồ -->
-        <div class="row">
-            <div class="col-md-8 mb-4">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-white fw-bold">
-                        Thời gian giao hàng theo loại Phương tiện
-                    </div>
-                    <div class="card-body">
-                        <!-- Thẻ canvas để Chart.js vẽ biểu đồ vào đây -->
-                        <canvas id="vehicleChart" height="100"></canvas>
+        <!-- PHẦN 01: TỔNG QUAN -->
+        <section id="section1" class="report-section">
+
+            <!-- BỘ LỌC -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white fw-bold">
+                    Bộ lọc dữ liệu
+                </div>
+
+                <div class="card-body">
+                    <div class="row align-items-end g-3">
+
+                        <div class="col-md-4">
+                            <label for="startDate" class="form-label">Từ ngày</label>
+                            <input type="date" id="startDate" class="form-control" min="2022-02-11" max="2022-04-06"
+                                value="2022-02-11">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="endDate" class="form-label">Đến ngày</label>
+                            <input type="date" id="endDate" class="form-control" min="2022-02-11" max="2022-04-06"
+                                value="2022-04-06">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="areaFilter" class="form-label">Khu vực</label>
+                            <select id="areaFilter" class="form-select">
+                                <option value="">Tất cả khu vực</option>
+                                <option value="Metropolitan">Metropolitan</option>
+                                <option value="Urban">Urban</option>
+                                <option value="Other">Other</option>
+                                <option value="Semi-Urban">Semi-Urban</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12 d-flex gap-2">
+                            <button id="applyFilters" class="btn btn-primary">
+                                Áp dụng bộ lọc
+                            </button>
+
+                            <button id="resetFilters" class="btn btn-outline-secondary">
+                                Đặt lại
+                            </button>
+
+                            <span id="filterStatus" class="text-muted small align-self-center"></span>
+                        </div>
+
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 mb-4">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-white fw-bold">
-                        Phân bố Mức độ Giao thông
+
+            <!-- KPI -->
+            <div class="row mb-4">
+
+                <div class="col-md-3 mb-3">
+                    <div class="card card-kpi shadow-sm h-100">
+                        <div class="card-body">
+                            <h6 class="card-title text-muted">Tổng số đơn hàng</h6>
+                            <h2 class="fw-bold" id="totalOrders">Đang tải...</h2>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <canvas id="trafficChart"></canvas>
+                </div>
+
+                <div class="col-md-3 mb-3">
+                    <div class="card card-kpi shadow-sm h-100" style="border-left-color: #198754;">
+                        <div class="card-body">
+                            <h6 class="card-title text-muted">Thời gian giao trung bình</h6>
+                            <h2 class="fw-bold">
+                                <span id="avgDeliveryTime">Đang tải...</span>
+                                <span class="fs-6 fw-normal">phút</span>
+                            </h2>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3 mb-3">
+                    <div class="card card-kpi shadow-sm h-100" style="border-left-color: #fd7e14;">
+                        <div class="card-body">
+                            <h6 class="card-title text-muted">Khoảng cách trung bình</h6>
+                            <h2 class="fw-bold">
+                                <span id="avgDistance">Đang tải...</span>
+                                <span class="fs-6 fw-normal">km</span>
+                            </h2>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3 mb-3">
+                    <div class="card card-kpi shadow-sm h-100" style="border-left-color: #6f42c1;">
+                        <div class="card-body">
+                            <h6 class="card-title text-muted">Thời gian chuẩn bị trung bình</h6>
+                            <h2 class="fw-bold">
+                                <span id="avgPrepTime">Đang tải...</span>
+                                <span class="fs-6 fw-normal">phút</span>
+                            </h2>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- KPI NGUY CƠ GIAO TRỄ -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card card-kpi shadow-sm" style="border-left-color: #dc3545;">
+                        <div class="card-body">
+                            <h6 class="card-title text-muted">Đơn có nguy cơ giao trễ</h6>
+                            <h2 class="fw-bold text-danger mb-1" id="lateOrderRate">
+                                Đang tải...
+                            </h2>
+                            <small class="text-muted" id="lateOrderRateDetail">
+                                Đang tải tỷ lệ rủi ro...
+                            </small>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+
+            <!-- XU HƯỚNG THEO NGÀY -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card shadow-sm chart-card">
+                        <div class="card-header bg-white fw-bold">
+                            Xu hướng số đơn hàng và thời gian giao theo ngày
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="dailyTrendChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- THỜI TIẾT VÀ GIAO THÔNG -->
+            <div class="row mb-4">
+
+                <div class="col-md-6 mb-3">
+                    <div class="card shadow-sm chart-card">
+                        <div class="card-header bg-white fw-bold">
+                            Thời gian giao hàng theo điều kiện thời tiết
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="weatherChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <div class="card shadow-sm chart-card">
+                        <div class="card-header bg-white fw-bold">
+                            Thời gian giao hàng theo mức độ giao thông
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="trafficChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- PHƯƠNG TIỆN VÀ KHU VỰC -->
+            <div class="row mb-4">
+
+                <div class="col-md-8 mb-3">
+                    <div class="card shadow-sm chart-card">
+                        <div class="card-header bg-white fw-bold">
+                            Thời gian giao hàng theo phương tiện và khu vực
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="vehicleChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <div class="card shadow-sm chart-card">
+                        <div class="card-header bg-white fw-bold">
+                            Cơ cấu đơn hàng theo danh mục sản phẩm
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="categoryChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- CÁC BIỂU ĐỒ BỔ SUNG ĐÃ TRIỂN KHAI -->
+            <div class="row mb-4">
+
+                <div class="col-md-6 mb-3">
+                    <div class="card shadow-sm chart-card">
+                        <div class="card-header bg-white fw-bold">
+                            Phân bố đơn hàng theo khu vực
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="areaChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <div class="card shadow-sm chart-card">
+                        <div class="card-header bg-white fw-bold">
+                            Phân bố đơn hàng theo mức độ giao thông
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="trafficCountChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- PHẦN 02: THỜI GIAN VÀ KHOẢNG CÁCH -->
+        <section id="section2" class="report-section d-none">
+            <h3 class="mb-4">02. Phân tích chiều sâu thời gian và khoảng cách</h3>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <p class="text-muted mb-0">
+                        Nội dung phân tích thời gian giao hàng, khoảng cách
+                        và mối quan hệ giữa các yếu tố sẽ được triển khai tại đây.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- PHẦN 03: KHU VỰC VÀ PHƯƠNG TIỆN -->
+        <section id="section3" class="report-section d-none">
+            <h3 class="mb-4">03. Phân tích theo khu vực và phương tiện vận chuyển</h3>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white fw-bold">
+                    Bộ lọc dữ liệu
+                </div>
+                <div class="card-body">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-4">
+                            <label for="area3StartDate" class="form-label">Từ ngày</label>
+                            <input type="date" id="area3StartDate" class="form-control" min="2022-02-11"
+                                max="2022-04-06" value="2022-02-11">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="area3EndDate" class="form-label">Đến ngày</label>
+                            <input type="date" id="area3EndDate" class="form-control" min="2022-02-11" max="2022-04-06"
+                                value="2022-04-06">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="area3Filter" class="form-label">Khu vực</label>
+                            <select id="area3Filter" class="form-select">
+                                <option value="">Tất cả khu vực</option>
+                                <option value="Metropolitan">Metropolitan</option>
+                                <option value="Urban">Urban</option>
+                                <option value="Other">Other</option>
+                                <option value="Semi-Urban">Semi-Urban</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <button id="area3ApplyFilters" class="btn btn-primary">
+                                Áp dụng bộ lọc
+                            </button>
+                            <button id="area3ResetFilters" class="btn btn-outline-secondary">
+                                Đặt lại
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-4 mb-3">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h6 class="text-muted">Khu vực giao nhanh nhất</h6>
+                            <h3 id="area3FastestArea">Đang tải...</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h6 class="text-muted">Phương tiện giao nhanh nhất</h6>
+                            <h3 id="area3FastestVehicle">Đang tải...</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h6 class="text-muted">Khoảng cách giao hàng trung bình</h6>
+                            <h3><span id="area3AverageDistance">Đang tải...</span> km</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-6 mb-3">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header bg-white fw-bold">
+                            Cơ cấu phương tiện theo khu vực
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="area3VehicleChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header bg-white fw-bold">
+                            Thời gian giao hàng trung bình theo khu vực
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="area3DeliveryChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-white fw-bold">
+                            Khoảng cách giao hàng trung bình theo khu vực
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="area3DistanceChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white fw-bold">
+                    Thời gian giao hàng theo khu vực và phương tiện
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover text-center" id="area3MatrixTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Khu vực</th>
+                                    <th>Phương tiện</th>
+                                    <th>Số đơn hàng</th>
+                                    <th>Thời gian giao trung bình (phút)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="4">Đang tải dữ liệu...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PHẦN 04: DỰ ĐOÁN NGUY CƠ GIAO TRỄ -->
+        <section id="section4" class="report-section d-none">
+
+            <h3 class="mb-4">
+                Dự đoán nguy cơ giao trễ bằng Machine Learning
+            </h3>
+
+            <!-- KPI -->
+            <div class="row mb-4">
+
+                <div class="col-md-4 mb-3">
+                    <div class="card card-kpi shadow-sm h-100" style="border-left-color: #dc3545;">
+                        <div class="card-body">
+                            <h6 class="text-muted">Tổng đơn có nguy cơ trễ</h6>
+                            <h2 class="fw-bold text-danger" id="riskTotalOrders">
+                                Đang tải...
+                            </h2>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <div class="card card-kpi shadow-sm h-100" style="border-left-color: #fd7e14;">
+                        <div class="card-body">
+                            <h6 class="text-muted">Xác suất rủi ro trung bình</h6>
+                            <h2 class="fw-bold" id="riskAverageProbability">
+                                Đang tải...
+                            </h2>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <div class="card card-kpi shadow-sm h-100" style="border-left-color: #198754;">
+                        <div class="card-body">
+                            <h6 class="text-muted">Tỷ lệ đơn có nguy cơ trễ</h6>
+                            <h2 class="fw-bold" id="riskRate">
+                                Đang tải...
+                            </h2>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- BIỂU ĐỒ THEO KHU VỰC VÀ PHƯƠNG TIỆN -->
+            <div class="row mb-4">
+
+                <div class="col-md-7 mb-3">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header bg-white fw-bold">
+                            Số đơn hàng có nguy cơ trễ theo khu vực
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="riskAreaVehicleChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MỨC ĐỘ RỦI RO -->
+                <div class="col-md-5 mb-3">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header bg-white fw-bold">
+                            Mức độ rủi ro hệ thống
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="riskGaugeChart"></canvas>
+                            </div>
+                            <h3 class="text-center fw-bold" id="riskGaugeValue">Đang tải...</h3>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- PHÂN LOẠI RỦI RO VÀ DANH SÁCH ĐƠN -->
+            <div class="row mb-4">
+
+                <div class="col-md-6 mb-3">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header bg-white fw-bold">
+                            Tỷ lệ phân loại nguy cơ giao trễ
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="riskDistributionChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header bg-white fw-bold">
+                            Danh sách đơn hàng cần can thiệp khẩn cấp
+                        </div>
+
+                        <div class="card-body">
+                            <div class="table-responsive" style="max-height: 380px; overflow-y: auto;">
+
+                                <table class="table table-bordered table-hover">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Order ID</th>
+                                            <th>Khu vực</th>
+                                            <th>Phương tiện</th>
+                                            <th>Xác suất rủi ro</th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody id="urgentOrdersTable">
+                                        <tr>
+                                            <td colspan="4" class="text-center">
+                                                Đang tải dữ liệu...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- PHẦN 05: ĐÁNH GIÁ VÀ TỐI ƯU MÔ HÌNH -->
+        <!-- PHẦN 05: ĐÁNH GIÁ VÀ TỐI ƯU MÔ HÌNH -->
+        <section id="section5" class="report-section d-none">
+
+            <style>
+                #section5 .model-card {
+                    border: 1px solid #d7a184;
+                    border-radius: 14px;
+                    overflow: hidden;
+                    height: 100%;
+                }
+
+                #section5 .model-card-header {
+                    background: #79391f;
+                    color: white;
+                    font-weight: bold;
+                    text-align: center;
+                    padding: 14px;
+                }
+
+                #section5 .model-card-body {
+                    background: #fffaf7;
+                    padding: 18px;
+                }
+
+                #section5 .model-table th {
+                    background: #79391f;
+                    color: white;
+                    text-align: center;
+                    vertical-align: middle;
+                }
+
+                #section5 .model-table td {
+                    text-align: center;
+                    vertical-align: middle;
+                    background: #f8c7b1;
+                    font-size: 17px;
+                }
+
+                #section5 .model-chart-container {
+                    position: relative;
+                    height: 300px;
+                }
+
+                #section5 .model-summary-title {
+                    color: #79391f;
+                    font-weight: bold;
+                }
+            </style>
+
+            <h3 class="mb-4">05. Đánh giá và tối ưu mô hình dự đoán</h3>
+
+            <!-- KHU VỰC 1: THÔNG SỐ MÔ HÌNH TỐI ƯU -->
+            <div class="model-card mb-3">
+                <div class="table-responsive">
+                    <table class="table table-bordered model-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Model</th>
+                                <th>Probability_Threshold</th>
+                                <th>Accuracy</th>
+                                <th>Precision</th>
+                                <th>Recall</th>
+                                <th>F1</th>
+                                <th>ROC_AUC</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            <tr>
+                                <td><strong>RandomForest</strong></td>
+                                <td>55.00%</td>
+                                <td>85.23%</td>
+                                <td>66.03%</td>
+                                <td>79.01%</td>
+                                <td>71.94%</td>
+                                <td>91.79%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- KHU VỰC 2: PRECISION VÀ RECALL THEO NGƯỠNG -->
+            <div class="model-card mb-3">
+                <div class="model-card-header">
+                    ĐÁNH ĐỔI GIỮA PRECISION VÀ RECALL THEO NGƯỠNG
+                </div>
+
+                <div class="model-card-body">
+                    <div class="model-chart-container">
+                        <canvas id="thresholdScatterChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KHU VỰC 3 VÀ 4 -->
+            <div class="row g-3 mb-4">
+
+                <!-- KHU VỰC 3: TỐI ƯU NGƯỠNG -->
+                <div class="col-lg-6">
+                    <div class="model-card">
+                        <div class="model-card-header">
+                            TỐI ƯU HÓA NGƯỠNG CẢNH BÁO
+                        </div>
+
+                        <div class="model-card-body">
+                            <div class="model-chart-container">
+                                <canvas id="thresholdOptimizationChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KHU VỰC 4: SO SÁNH MÔ HÌNH -->
+                <div class="col-lg-6">
+                    <div class="model-card">
+                        <div class="model-card-header">
+                            SO SÁNH CÁC MÔ HÌNH MACHINE LEARNING
+                        </div>
+
+                        <div class="model-card-body">
+                            <div class="model-chart-container">
+                                <canvas id="modelComparisonChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
     </div>
 
-    <!-- Code vẽ biểu đồ -->
-     <script src="js/auth-check.js" defer></script>
+    <script src="js/auth-check.js" defer></script>
     <script src="js/dashboard.js" defer></script>
+
 </body>
 
 </html>

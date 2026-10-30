@@ -1,22 +1,25 @@
-// File này dùng để kiểm tra quyền và ẩn/hiện các nút trên thanh menu
-document.addEventListener('DOMContentLoaded', function () {
-    // Lấy quyền người dùng từ localStorage (đã lưu lúc đăng nhập)
-    const role = localStorage.getItem('role');
 
-    // Nếu KHÔNG phải là admin
-    if (role !== 'admin') {
-        // 1. Tìm và ẩn nút "Quản lý Users"
+document.addEventListener("DOMContentLoaded", function () {
+    const token = localStorage.getItem("token");
+    const role = localStorage.getItem("role");
+
+    // Chặn người chưa đăng nhập hoặc còn dùng token giả
+    if (!token || token === "fake-jwt-token") {
+        alert("Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.");
+        window.location.href = "index.html";
+        return;
+    }
+
+    // Chỉ Admin mới nhìn thấy các chức năng quản trị
+    if (role !== "admin") {
         const userBtns = document.querySelectorAll('a[href="users.html"]');
-        userBtns.forEach(btn => btn.style.display = 'none');
+        userBtns.forEach(btn => {
+            btn.style.display = "none";
+        });
 
-        // 2. Tìm và ẩn nút "Báo cáo & Backup"
         const reportBtns = document.querySelectorAll('a[href="reports.html"]');
-        reportBtns.forEach(btn => btn.style.display = 'none');
-
-        // 3. (Tùy chọn) Đổi chữ "Xin chào, Admin!" thành "Xin chào, User!"
-        const greetingText = document.querySelector('span.text-white.me-3.border-start.ps-3');
-        if (greetingText) {
-            greetingText.innerText = 'Xin chào, Thành viên!';
-        }
+        reportBtns.forEach(btn => {
+            btn.style.display = "none";
+        });
     }
 });

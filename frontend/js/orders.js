@@ -1,111 +1,419 @@
-// 1. Lấy dữ liệu từ localStorage. Nếu chưa có (lần đầu mở), dùng dữ liệu mẫu
-let allOrders = JSON.parse(localStorage.getItem('ordersData'));
 
-if (!allOrders) {
-    // Dữ liệu mẫu ban đầu
-    allOrders = [
-        { id: "ialx566343618", date: "2022-03-19", age: 37, rating: 4.9, traffic: "High", vehicle: "Van", time: 120 },
-        { id: "akqg208421122", date: "2022-03-25", age: 34, rating: 4.5, traffic: "Jam", vehicle: "Scooter", time: 165 },
-        { id: "njpu434582536", date: "2022-03-19", age: 23, rating: 4.4, traffic: "Low", vehicle: "Scooter", time: 130 },
-        { id: "rjto796129700", date: "2022-04-05", age: 38, rating: 4.7, traffic: "Medium", vehicle: "Scooter", time: 105 }
-    ];
-    // Lưu dữ liệu mẫu vào localStorage
-    localStorage.setItem('ordersData', JSON.stringify(allOrders));
-}
+const API_BASE_URL = "http://127.0.0.1:8000";
+const BATCH_SIZE = 1000;
 
-// 2. Hàm hiển thị dữ liệu ra bảng
-function renderTable(data) {
-    const tbody = document.getElementById('orderTableBody');
-    tbody.innerHTML = ''; // Xóa dữ liệu cũ
+let allOrders = [];
+let currentOrders = [];
 
-    if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Không tìm thấy đơn hàng nào!</td></tr>';
-        return;
+// 1. KIỂM TRA ĐĂNG NHẬP
+function getToken() {
+    const token = localStorage.getItem("token");
+
+    if (!token || token === "fake-jwt-token") {
+        alert("Vui lòng đăng nhập bằng tài khoản thật.");
+        window.location.href = "index.html";
+        return null;
     }
 
-    data.forEach(order => {
-        // Tạo màu cho nhãn Giao thông cho đẹp
-        let trafficBadge = "";
-        if (order.traffic === "Low") trafficBadge = '<span class="badge bg-success">Low</span>';
-        else if (order.traffic === "Medium") trafficBadge = '<span class="badge bg-warning text-dark">Medium</span>';
-        else if (order.traffic === "High") trafficBadge = '<span class="badge bg-orange" style="background-color: #fd7e14;">High</span>';
-        else if (order.traffic === "Jam") trafficBadge = '<span class="badge bg-danger">Jam</span>';
+    return token;
+}
 
-        const row = `
+// 2. CHUYỂN DỮ LIỆU THÀNH HTML AN TOÀN
+function escapeHTML(value) {
+    return String(value ?? "—").replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[char]);
+}
+
+// 3. ĐỊNH DẠNG NGÀY ĐẶT HÀNG
+function formatOrderDate(order) {
+    const key = String(order.DateKey ?? "");
+
+    if (/^\d{8}$/.test(key)) {
+        return `${key.slice(0, 4)}-${key.slice(4, 6)}-${key.slice(6, 8)}`;
+    }
+
+    return order.Order_Date ?? "—";
+}
+
+// 4. CHUẨN HÓA DỮ LIỆU ĐƠN HÀNG
+function normalizeOrder(order) {
+    return {
+        id: String(order.Order_ID ?? ""),
+        date: formatOrderDate(order),
+        age: order.Agent_Age ?? "—",
+        rating: order.Agent_Rating ?? "—",
+        traffic: order.Traffic ?? "—",
+        vehicle: order.VehicleKey != null
+            ? `Vehicle ${order.VehicleKey}`
+            : "—",
+        time: order.Delivery_Time ?? "—",
+        raw: order
+    };
+}
+
+// 5. TẢI TOÀN BỘ ĐƠN HÀNG TỪ FASTAPI
+async function loadOrders() {
+    const token = getToken();
+    if (!token) return;
+
+    const tbody = document.getElementById("orderTableBody");
+
+    if (tbody) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="text-center py-4">
+                    Đang chuẩn bị tải đơn hàng...
+                </td>
+            </tr>
+        `;
+    }
+
+    try {
+        let skip = 0;
+        let total = null;
+        const records = [];
+
+        while (total === null || skip < total) {
+            const response = await fetch(
+                `${API_BASE_URL}/api/orders/?limit=${BATCH_SIZE}&skip=${skip}`,
+                {
+                    method: "GET",
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Accept": "application/json"
+                    }
+                }
+            );
+
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem("token");
+                localStorage.removeItem("role");
+
+                alert(
+                    "Phiên đăng nhập hết hạn hoặc bạn không có quyền truy cập."
+                );
+
+                window.location.href = "index.html";
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error(`API trả về HTTP ${response.status}`);
+            }
+
+            const result = await response.json();
+
+            if (!Array.isArray(result.data)) {
+                throw new Error(
+                    "API không trả về danh sách đơn hàng hợp lệ."
+                );
+            }
+
+            if (total === null) {
+                total = Number(result.total);
+
+                if (!Number.isFinite(total) || total < 0) {
+                    throw new Error("Tổng số đơn hàng không hợp lệ.");
+                }
+            }
+
+            if (result.data.length === 0 && skip < total) {
+                throw new Error(
+                    "API không trả thêm dữ liệu. Đã dừng để tránh lặp vô hạn."
+                );
+            }
+
+            records.push(...result.data);
+            skip += result.data.length;
+
+            if (tbody) {
+                tbody.innerHTML = `
                     <tr>
-                        <td class="fw-bold">${order.id}</td>
-                        <td>${order.date}</td>
-                        <td>${order.age}</td>
-                        <td>${order.rating} ⭐</td>
-                        <td>${trafficBadge}</td>
-                        <td>${order.vehicle}</td>
-                        <td>${order.time}</td>
-                        <td>
-                            <button class="btn btn-sm btn-info text-white" onclick="viewOrder('${order.id}')">Xem</button>
-                            <button class="btn btn-sm btn-warning" onclick="editOrder('${order.id}')">Sửa</button>
-                            <button class="btn btn-sm btn-danger" onclick="deleteOrder('${order.id}')">Xóa</button>
+                        <td colspan="8" class="text-center py-4">
+                            Đang tải
+                            <strong>
+                                ${records.length.toLocaleString("vi-VN")}
+                            </strong>
+                            /
+                            <strong>
+                                ${total.toLocaleString("vi-VN")}
+                            </strong>
+                            đơn hàng...
                         </td>
                     </tr>
                 `;
-        tbody.innerHTML += row;
-    });
+            }
+
+            console.log(
+                `Tiến độ tải: ${records.length}/${total} đơn hàng`
+            );
+        }
+
+        // Chuẩn hóa toàn bộ dữ liệu sau khi tải xong
+        allOrders = records.map(normalizeOrder);
+        currentOrders = [...allOrders];
+
+        console.log("Tổng đơn hàng backend:", total);
+        console.log("Tổng đơn hàng đã tải:", allOrders.length);
+
+        // Hiển thị danh sách sau khi tải
+        applyFilters();
+
+    } catch (error) {
+        console.error("Lỗi tải đơn hàng:", error);
+        console.error("Chi tiết:", error.message);
+
+        if (tbody) {
+            tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="text-center text-danger py-4">
+                    ${escapeHTML(error.message)}
+                </td>
+            </tr>
+        `;
+        }
+    }
+
 }
 
-// 3. Hàm xử lý Tìm kiếm & Lọc
-function applyFilters() {
-    const keyword = document.getElementById('searchInput').value.toLowerCase();
-    const trafficFilter = document.getElementById('filterTraffic').value;
+// 6. HIỂN THỊ BẢNG ĐƠN HÀNG
+function renderTable(data) {
+    const tbody = document.getElementById("orderTableBody");
+    if (!tbody) return;
 
-    const filteredData = allOrders.filter(order => {
-        // Kiểm tra từ khóa (theo mã đơn)
+    if (data.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="text-center text-muted py-4">
+                    Không tìm thấy đơn hàng nào!
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = data.map(order => {
+        let trafficBadge = "";
+
+        switch (order.traffic) {
+            case "Low":
+                trafficBadge =
+                    '<span class="badge bg-success">Low</span>';
+                break;
+
+            case "Medium":
+                trafficBadge =
+                    '<span class="badge bg-warning text-dark">Medium</span>';
+                break;
+
+            case "High":
+                trafficBadge =
+                    '<span class="badge" style="background-color:#fd7e14">High</span>';
+                break;
+
+            case "Jam":
+                trafficBadge =
+                    '<span class="badge bg-danger">Jam</span>';
+                break;
+
+            default:
+                trafficBadge = `
+                    <span class="badge bg-secondary">
+                        ${escapeHTML(order.traffic)}
+                    </span>
+                `;
+        }
+
+        const safeId = escapeHTML(order.id);
+        const safeDate = escapeHTML(order.date);
+        const safeAge = escapeHTML(order.age);
+        const safeRating = escapeHTML(order.rating);
+        const safeVehicle = escapeHTML(order.vehicle);
+        const safeTime = escapeHTML(order.time);
+
+        return `
+            <tr>
+                <td class="fw-bold">${safeId}</td>
+                <td>${safeDate}</td>
+                <td>${safeAge}</td>
+                <td>
+                    ${safeRating === "—" ? "—" : `${safeRating} ⭐`}
+                </td>
+                <td>${trafficBadge}</td>
+                <td>${safeVehicle}</td>
+                <td>
+                    ${safeTime === "—" ? "—" : `${safeTime} phút`}
+                </td>
+                <td>
+                    <button
+                        class="btn btn-sm btn-info text-white"
+                        onclick="viewOrder('${safeId}')">
+                        Xem
+                    </button>
+
+                    <button
+                        class="btn btn-sm btn-warning"
+                        onclick="editOrder('${safeId}')">
+                        Sửa
+                    </button>
+
+                    <button
+                        class="btn btn-sm btn-danger"
+                        onclick="deleteOrder('${safeId}')">
+                        Xóa
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join("");
+}
+
+// 7. TÌM KIẾM VÀ LỌC ĐƠN HÀNG
+function applyFilters() {
+    const searchElement = document.getElementById("searchInput");
+    const trafficElement = document.getElementById("filterTraffic");
+
+    const keyword = (searchElement?.value ?? "")
+        .trim()
+        .toLowerCase();
+
+    const trafficFilter = trafficElement?.value ?? "";
+
+    currentOrders = allOrders.filter(order => {
         const matchKeyword = order.id.toLowerCase().includes(keyword);
-        // Kiểm tra bộ lọc giao thông
-        const matchTraffic = trafficFilter === "" || order.traffic === trafficFilter;
+
+        const matchTraffic =
+            trafficFilter === "" ||
+            order.traffic === trafficFilter;
 
         return matchKeyword && matchTraffic;
     });
 
-    renderTable(filteredData);
-}
+    renderTable(currentOrders);
 
-// 4. Hàm làm mới bộ lọc
-function resetFilters() {
-    document.getElementById('searchInput').value = '';
-    document.getElementById('filterTraffic').value = '';
-    renderTable(allOrders);
-}
+    // Cập nhật số lượng kết quả nếu HTML có phần tử này
+    const resultCount = document.getElementById("orderResultCount");
 
-// 5. Hàm xóa đơn hàng (Mock)
-function deleteOrder(id) {
-    if (confirm(`Bạn có chắc chắn muốn xóa đơn hàng ${id} không?`)) {
-        alert(`Đã xóa đơn hàng ${id} (Chức năng thật sẽ gọi API của TV3)`);
+    if (resultCount) {
+        resultCount.textContent =
+            `Hiển thị ${currentOrders.length.toLocaleString("vi-VN")} / ` +
+            `${allOrders.length.toLocaleString("vi-VN")} đơn hàng`;
     }
 }
 
-// 6. Chạy hiển thị bảng lần đầu khi mở trang
-renderTable(allOrders);
-function editOrder(id) {
-    window.location.href = `order-form.html?id=${id}`;
+// 8. ĐẶT LẠI BỘ LỌC
+function resetFilters() {
+    const searchElement = document.getElementById("searchInput");
+    const trafficElement = document.getElementById("filterTraffic");
+
+    if (searchElement) searchElement.value = "";
+    if (trafficElement) trafficElement.value = "";
+
+    applyFilters();
 }
 
+// 9. MỞ TRANG SỬA ĐƠN HÀNG
+function editOrder(id) {
+    window.location.href =
+        `order-form.html?id=${encodeURIComponent(id)}`;
+}
+
+// 10. XEM CHI TIẾT ĐƠN HÀNG
 function viewOrder(id) {
-    const order = allOrders.find(o => o.id === id);
+    const order = allOrders.find(item => item.id === String(id));
     if (!order) return;
 
-    document.getElementById('modalOrderId').innerText = order.id;
-    // Đổi ngày hiển thị sang VN
-    if (order.date) {
-        const [y, m, d] = order.date.split('-');
-        document.getElementById('modalOrderDate').innerText = `${d}/${m}/${y}`;
-    } else {
-        document.getElementById('modalOrderDate').innerText = "";
-    }
-    document.getElementById('modalAgentAge').innerText = order.age;
-    document.getElementById('modalAgentRating').innerText = order.rating;
-    document.getElementById('modalTraffic').innerText = order.traffic;
-    document.getElementById('modalVehicle').innerText = order.vehicle;
-    document.getElementById('modalDeliveryTime').innerText = order.time + " phút";
+    const fields = {
+        modalOrderId: order.id,
+        modalOrderDate: order.date,
+        modalAgentAge: order.age,
+        modalAgentRating: order.rating,
+        modalTraffic: order.traffic,
+        modalVehicle: order.vehicle,
+        modalDeliveryTime:
+            order.time === "—" ? "—" : `${order.time} phút`
+    };
 
-    const modal = new bootstrap.Modal(document.getElementById('orderDetailModal'));
-    modal.show();
+    for (const [elementId, value] of Object.entries(fields)) {
+        const element = document.getElementById(elementId);
+
+        if (element) {
+            element.textContent = value;
+        }
+    }
+
+    const modalElement = document.getElementById("orderDetailModal");
+
+    if (modalElement && typeof bootstrap !== "undefined") {
+        bootstrap.Modal.getOrCreateInstance(modalElement).show();
+    }
 }
+
+// 11. XÓA ĐƠN HÀNG QUA API
+async function deleteOrder(id) {
+    if (localStorage.getItem("role") !== "admin") {
+        alert("Chỉ Admin mới được phép xóa đơn hàng.");
+        return;
+    }
+
+    if (!confirm(`Bạn có chắc chắn muốn xóa đơn hàng ${id} không?`)) {
+        return;
+    }
+
+    const token = getToken();
+    if (!token) return;
+
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/api/orders/${encodeURIComponent(id)}`,
+            {
+                method: "DELETE",
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Accept": "application/json"
+                }
+            }
+        );
+
+        if (response.status === 401 || response.status === 403) {
+            alert(
+                "Bạn không có quyền xóa đơn hàng hoặc phiên đăng nhập đã hết hạn."
+            );
+            return;
+        }
+
+        if (!response.ok) {
+            const message = await response.text();
+
+            throw new Error(`HTTP ${response.status}: ${message}`);
+        }
+
+        alert("Đã xóa đơn hàng thành công.");
+
+        // Tải lại danh sách để đồng bộ với MongoDB
+        await loadOrders();
+
+    } catch (error) {
+        console.error("Lỗi xóa đơn hàng:", error);
+
+        alert(
+            "Không xóa được đơn hàng. Hãy kiểm tra endpoint DELETE trong backend."
+        );
+    }
+}
+
+// 12. KHỞI TẠO TRANG
+document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("searchInput")
+        ?.addEventListener("input", applyFilters);
+
+    document.getElementById("filterTraffic")
+        ?.addEventListener("change", applyFilters);
+
+    loadOrders();
+});
