@@ -797,6 +797,313 @@ def get_area_vehicle_dashboard(
             status_code=503,
             detail="Unable to calculate area and vehicle dashboard.",
         ) from exc
+# API Dashboard Phan tich chieu sau thoi gian va khoang cach - Trang 2
+@router.get("/dashboard/time-distance")
+def get_time_distance_dashboard(
+    start_date: str | None = Query(default=None),
+    end_date: str | None = Query(default=None),
+    area: str | None = Query(default=None),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Return time-distance analytics.
+    KPI and histogram use all filtered orders.
+    Scatter and map points are sampled to keep the response lightweight.
+    """
+    try:
+        orders_collection = db["orders"]
+        date_collection = db["dim_date"]
+
+        # 1. Lay gioi han ngay tu dim_date
+        date_bounds = list(date_collection.aggregate([
+            {
+                "$group": {
+                    "_id": None,
+                    "minimum": {"$min": "$DateKey"},
+                    "maximum": {"$max": "$DateKey"},
+                }
+            }
+        ]))
+
+        if not date_bounds:
+            raise HTTPException(
+                status_code=404,
+                detail="Date dimension is empty.",
+            )
+
+        min_date_key = date_bounds[0]["minimum"]
+        max_date_key = date_bounds[0]["maximum"]
+
+        # 2. Chuyen ngay YYYY-MM-DD thanh DateKey
+        def to_date_key(value, default):
+            if value is None:
+                return default
+
+            try:
+                return int(
+                    datetime.strptime(
+                        value, "%Y-%m-%d"
+                    ).strftime("%Y%m%d")
+                )
+            except ValueError:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Date must use YYYY-MM-DD format.",
+                )
+
+        start_key = to_date_key(start_date, min_date_key)
+        end_key = to_date_key(end_date, max_date_key)
+
+        if start_key > end_key:
+            raise HTTPException(
+                status_code=400,
+                detail="start_date cannot be after end_date.",
+            )
+
+        if start_key < min_date_key or end_key > max_date_key:
+            raise HTTPException(
+                status_code=400,
+                detail="Selected dates are outside available data range.",
+            )
+
+        # 3. Dieu kien loc du lieu
+        filters = {
+            "DateKey": {
+                "$gte": start_key,
+                "$lte": end_key,
+            },
+            "Delivery_Time": {
+                "$type": "number",
+                "$gte": 0,
+            },
+        }
+
+        if area:
+            filters["Area"] = area
+
+        # 4. KPI tong hop tren toan bo don hang
+        kpi_pipeline = [
+            {"$match": filters},
+            {
+                "$group": {
+                    "_id": None,
+                    "total_orders": {"$sum": 1},
+                    "average_delivery_time": {
+                        "$avg": "$Delivery_Time"
+                    },
+                    "average_prep_time": {
+                        "$avg": "$prep_time_min"
+                    },
+                    "average_distance": {
+                        "$avg": "$distance_haversine_km"
+                    },
+                }
+            },
+        ]
+
+        kpi_result = list(
+            orders_collection.aggregate(kpi_pipeline)
+        )
+
+        raw_kpi = kpi_result[0] if kpi_result else {}
+
+        kpi = {
+            "total_orders": raw_kpi.get("total_orders", 0),
+
+            "average_delivery_time": round(
+                raw_kpi["average_delivery_time"], 2
+            ) if raw_kpi.get("average_delivery_time") is not None else None,
+
+            "average_prep_time": round(
+                raw_kpi["average_prep_time"], 2
+            ) if raw_kpi.get("average_prep_time") is not None else None,
+
+            "average_distance": round(
+                raw_kpi["average_distance"], 2
+            ) if raw_kpi.get("average_distance") is not None else None,
+        }
+
+        # 5. So sanh thoi gian chuan bi va giao hang theo khu vuc
+        area_pipeline = [
+            {"$match": filters},
+            {
+                "$group": {
+                    "_id": {
+                        "$ifNull": ["$Area", "Unknown"]
+                    },
+                    "order_count": {"$sum": 1},
+                    "average_prep_time": {
+                        "$avg": "$prep_time_min"
+                    },
+                    "average_delivery_time": {
+                        "$avg": "$Delivery_Time"
+                    },
+                }
+            },
+            {"$sort": {"_id": 1}},
+        ]
+
+        by_area = []
+
+        for item in orders_collection.aggregate(area_pipeline):
+            by_area.append({
+                "area": item["_id"],
+                "order_count": item["order_count"],
+
+                "average_prep_time": round(
+                    item["average_prep_time"], 2
+                ) if item.get("average_prep_time") is not None else None,
+
+                "average_delivery_time": round(
+                    item["average_delivery_time"], 2
+                ) if item.get("average_delivery_time") is not None else None,
+            })
+
+        # 6. Phan bo thoi gian giao hang theo khoang
+        boundaries = [
+            0, 30, 60, 90, 120, 150,
+            180, 210, 240, 270, 300, 360
+        ]
+
+        histogram_pipeline = [
+            {"$match": filters},
+            {
+                "$bucket": {
+                    "groupBy": "$Delivery_Time",
+                    "boundaries": boundaries,
+                    "default": "360+",
+                    "output": {
+                        "count": {"$sum": 1}
+                    },
+                }
+            },
+            {"$sort": {"_id": 1}},
+        ]
+
+        histogram_lookup = {
+            item["_id"]: item["count"]
+            for item in orders_collection.aggregate(
+                histogram_pipeline
+            )
+        }
+
+        histogram = []
+
+        for lower, upper in zip(
+            boundaries[:-1],
+            boundaries[1:]
+        ):
+            histogram.append({
+                "range": f"{lower}-{upper}",
+                "count": histogram_lookup.get(lower, 0),
+            })
+
+        histogram.append({
+            "range": "360+",
+            "count": histogram_lookup.get("360+", 0),
+        })
+
+        # 7. Bieu do phan tan: lay mau toi da 1.500 don
+        scatter_pipeline = [
+            {
+                "$match": {
+                    **filters,
+                    "distance_haversine_km": {
+                        "$type": "number",
+                        "$gte": 0,
+                    },
+                }
+            },
+            {"$sample": {"size": 1500}},
+            {
+                "$project": {
+                    "_id": 0,
+                    "distance_km": "$distance_haversine_km",
+                    "delivery_time": "$Delivery_Time",
+                    "traffic": 1,
+                    "area": 1,
+                }
+            },
+        ]
+
+        scatter_points = list(
+            orders_collection.aggregate(scatter_pipeline)
+        )
+
+        # 8. Ban do: lay mau toi da 1.000 don co du toa do
+        map_pipeline = [
+            {
+                "$match": {
+                    **filters,
+                    "Store_Latitude": {
+                        "$type": "number",
+                        "$gte": -90,
+                        "$lte": 90,
+                    },
+                    "Store_Longitude": {
+                        "$type": "number",
+                        "$gte": -180,
+                        "$lte": 180,
+                    },
+                    "Drop_Latitude": {
+                        "$type": "number",
+                        "$gte": -90,
+                        "$lte": 90,
+                    },
+                    "Drop_Longitude": {
+                        "$type": "number",
+                        "$gte": -180,
+                        "$lte": 180,
+                    },
+                }
+            },
+            {"$sample": {"size": 1000}},
+            {
+                "$project": {
+                    "_id": 0,
+                    "Order_ID": 1,
+                    "Area": 1,
+                    "Delivery_Time": 1,
+                    "Store_Latitude": 1,
+                    "Store_Longitude": 1,
+                    "Drop_Latitude": 1,
+                    "Drop_Longitude": 1,
+                }
+            },
+        ]
+
+        map_points = list(
+            orders_collection.aggregate(map_pipeline)
+        )
+
+        # 9. Tra ve ket qua cho Frontend
+        return {
+            "filters": {
+                "start_date": str(start_key),
+                "end_date": str(end_key),
+                "area": area,
+            },
+            "kpi": kpi,
+            "by_area": by_area,
+            "histogram": histogram,
+            "scatter_points": scatter_points,
+            "scatter_sample_count": len(scatter_points),
+            "map_points": map_points,
+            "map_sample_count": len(map_points),
+            "map_note": (
+                "Ban do hien thi mau toi da 1.000 don; "
+                "KPI va bieu do phan bo dung toan bo don thoa bo loc."
+            ),
+        }
+
+    except HTTPException:
+        raise
+
+    except PyMongoError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Unable to calculate time-distance dashboard.",
+        ) from exc
 # 3. GET: Chi tiet don hang - yeu cau dang nhap
 @router.get("/{order_id}")
 def get_order_detail(

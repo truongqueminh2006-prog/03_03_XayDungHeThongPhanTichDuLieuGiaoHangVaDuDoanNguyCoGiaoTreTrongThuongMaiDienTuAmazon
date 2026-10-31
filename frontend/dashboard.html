@@ -8,6 +8,8 @@
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <style>
         body {
@@ -24,7 +26,109 @@
 
         .chart-container {
             position: relative;
-            min-height: 300px;
+            width: 100%;
+            height: 340px;
+            min-height: 0;
+        }
+
+        #section2Map {
+            width: 100%;
+            height: 340px;
+            border-radius: 10px;
+            z-index: 1;
+        }
+
+        /* ================= PHAN 2 - GIAO DIEN MOI ================= */
+
+        /* ================= PHAN 2 - GIAO DIEN ================= */
+
+        #section2 {
+            padding: 16px 0 30px;
+            color: #344054;
+        }
+
+        #section2 h3 {
+            color: #26364a;
+            font-size: 27px;
+            font-weight: 700;
+            letter-spacing: -0.4px;
+            margin-bottom: 0;
+        }
+
+        #section2 .row {
+            row-gap: 22px;
+        }
+
+        #section2 .card {
+            background: #ffffff;
+            border: 1px solid #e4e9f0;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 3px 12px rgba(35, 55, 80, 0.06);
+            transition: box-shadow 0.2s ease;
+        }
+
+        #section2 .card:hover {
+            box-shadow: 0 6px 18px rgba(35, 55, 80, 0.10);
+        }
+
+        #section2 .card-header {
+            background: #edf3f8 !important;
+            color: #26364a;
+            border-bottom: 1px solid #e1e8ef;
+            padding: 16px 20px;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        #section2 .card-body {
+            background: #ffffff;
+            padding: 18px;
+        }
+
+        #section2 .chart-container {
+            position: relative;
+            width: 100%;
+            height: 350px;
+        }
+
+        #section2Map {
+            width: 100%;
+            height: 350px;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #edf1f5;
+            z-index: 1;
+        }
+
+        #section2 .small.text-muted {
+            color: #8492a6 !important;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        #section2 .card-body canvas {
+            max-width: 100%;
+        }
+
+        #timeDistanceStatus {
+            color: #64748b;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            #section2 h3 {
+                font-size: 21px;
+            }
+
+            #section2 .chart-container {
+                height: 290px;
+            }
+
+            #section2Map {
+                height: 290px;
+            }
         }
     </style>
 </head>
@@ -53,7 +157,9 @@
                     <span id="userGreeting" class="text-white me-3 border-start ps-3">
                         Xin chào, Thành viên!
                     </span>
-                    <a href="index.html" class="btn btn-danger btn-sm">Đăng xuất</a>
+                    <a href="index.html" id="logoutBtn" class="btn btn-danger btn-sm">
+                        Đăng xuất
+                    </a>
                 </div>
             </div>
         </div>
@@ -319,18 +425,98 @@
             </div>
         </section>
 
-        <!-- PHẦN 02: THỜI GIAN VÀ KHOẢNG CÁCH -->
+        <!-- PHẦN 02: PHÂN TÍCH THỜI GIAN VÀ KHOẢNG CÁCH -->
         <section id="section2" class="report-section d-none">
-            <h3 class="mb-4">02. Phân tích chiều sâu thời gian và khoảng cách</h3>
 
-            <div class="card shadow-sm mb-4">
-                <div class="card-body">
-                    <p class="text-muted mb-0">
-                        Nội dung phân tích thời gian giao hàng, khoảng cách
-                        và mối quan hệ giữa các yếu tố sẽ được triển khai tại đây.
-                    </p>
-                </div>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                <h3 class="mb-0">
+                    02. Phân tích chiều sâu thời gian và khoảng cách
+                </h3>
+
+                <span id="timeDistanceStatus" class="small text-muted">
+                    Chưa tải dữ liệu
+                </span>
             </div>
+
+            <!-- 4 BIỂU ĐỒ -->
+            <div class="row g-4 mb-4">
+
+                <!-- 1. Bản đồ -->
+                <div class="col-lg-6">
+                    <div class="card shadow-sm h-100">
+
+                        <div class="card-header bg-white fw-bold">
+                            Bản đồ phân bố điểm giao hàng
+                        </div>
+
+                        <div class="card-body">
+                            <div id="section2Map"></div>
+
+                            <div class="small text-muted mt-2" id="s2MapNote">
+                                Đang tải vị trí...
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- 2. So sánh thời gian -->
+                <div class="col-lg-6">
+                    <div class="card shadow-sm h-100">
+
+                        <div class="card-header bg-white fw-bold">
+                            So sánh thời gian chuẩn bị và giao hàng trung bình
+                        </div>
+
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="s2AreaTimeChart"></canvas>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- 3. Scatter Plot -->
+                <div class="col-lg-6">
+                    <div class="card shadow-sm h-100">
+
+                        <div class="card-header bg-white fw-bold">
+                            Khoảng cách và thời gian giao hàng
+                        </div>
+
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="s2DistanceScatterChart"></canvas>
+                            </div>
+
+                            <div class="small text-muted mt-2" id="s2ScatterNote">
+                                Đang tải mẫu dữ liệu...
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- 4. Histogram -->
+                <div class="col-lg-6">
+                    <div class="card shadow-sm h-100">
+
+                        <div class="card-header bg-white fw-bold">
+                            Phân bố thời gian giao hàng
+                        </div>
+
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="s2DeliveryHistogram"></canvas>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+
         </section>
 
         <!-- PHẦN 03: KHU VỰC VÀ PHƯƠNG TIỆN -->
@@ -607,7 +793,6 @@
 
         </section>
 
-        <!-- PHẦN 05: ĐÁNH GIÁ VÀ TỐI ƯU MÔ HÌNH -->
         <!-- PHẦN 05: ĐÁNH GIÁ VÀ TỐI ƯU MÔ HÌNH -->
         <section id="section5" class="report-section d-none">
 
