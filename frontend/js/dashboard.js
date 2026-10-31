@@ -1,10 +1,9 @@
-﻿
-const API_BASE_URL = "http://127.0.0.1:8000";
+﻿const API_BASE_URL = "http://127.0.0.1:8000";
 
-// Quáº£n lÃ½ cÃ¡c biá»ƒu Ä‘á»“
+// Quản lý các biểu đồ
 const dashboardCharts = {};
 
-// Quáº£n lÃ½ dá»¯ liá»‡u vÃ  báº£n Ä‘á»“ Pháº§n 2
+// Quản lý dữ liệu và bản đồ Phần 2
 let section2Loaded = false;
 let section2Map = null;
 let section2MapLayer = null;
@@ -16,12 +15,12 @@ const chartColors = [
     "#1982c4", "#8ac926", "#ff595e", "#0d6efd"
 ];
 
-// Kiá»ƒm tra Ä‘Äƒng nháº­p
+// Kiểm tra đăng nhập
 function checkLogin() {
     const token = localStorage.getItem("token");
 
     if (!token || token === "fake-jwt-token") {
-        alert("PhiÃªn Ä‘Äƒng nháº­p khÃ´ng há»£p lá»‡. Vui lÃ²ng Ä‘Äƒng nháº­p láº¡i.");
+        alert("Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.");
         window.location.href = "index.html";
         return false;
     }
@@ -29,7 +28,7 @@ function checkLogin() {
     return true;
 }
 
-// Lá»i chÃ o ngÆ°á»i dÃ¹ng
+// Lời chào người dùng
 function updateGreeting() {
     const role = localStorage.getItem("role");
     const greeting = document.getElementById("userGreeting");
@@ -37,15 +36,18 @@ function updateGreeting() {
     if (greeting) {
         greeting.textContent =
             role === "admin"
-                ? "Xin chÃ o, Admin!"
-                : "Xin chÃ o, ThÃ nh viÃªn!";
+                ? "Xin chào, Admin!"
+                : "Xin chào, Thành viên!";
     }
 }
 
-// Äá»‹nh dáº¡ng sá»‘
+// Định dạng số
 function formatNumber(value, digits = 0) {
-    if (value === null || value === undefined ||
-        !Number.isFinite(Number(value))) {
+    if (
+        value === null ||
+        value === undefined ||
+        !Number.isFinite(Number(value))
+    ) {
         return "N/A";
     }
 
@@ -55,11 +57,11 @@ function formatNumber(value, digits = 0) {
     });
 }
 
-// Táº¡o hoáº·c cáº­p nháº­t biá»ƒu Ä‘á»“
+// Tạo hoặc cập nhật biểu đồ
 function createChart(canvasId, config) {
     const canvas = document.getElementById(canvasId);
 
-    if (!canvas) return;
+    if (!canvas || typeof Chart === "undefined") return;
 
     if (dashboardCharts[canvasId]) {
         dashboardCharts[canvasId].destroy();
@@ -71,7 +73,7 @@ function createChart(canvasId, config) {
     );
 }
 
-// Láº¥y token vÃ  táº£i Dashboard
+// Lấy token và tải Dashboard
 async function loadDashboard() {
     if (!checkLogin()) return;
 
@@ -79,7 +81,7 @@ async function loadDashboard() {
 
     const token = localStorage.getItem("token");
 
-    // Thiáº¿t láº­p ngÃ y máº·c Ä‘á»‹nh
+    // Thiết lập ngày mặc định
     const startInput = document.getElementById("startDate");
     const endInput = document.getElementById("endDate");
 
@@ -91,33 +93,36 @@ async function loadDashboard() {
         endInput.value = "2022-04-06";
     }
 
-    // Gáº¯n sá»± kiá»‡n bá»™ lá»c
+    // Gắn sự kiện bộ lọc
     document.getElementById("applyFilters")?.addEventListener(
         "click",
-        () => loadOverview(token)
+        () => loadOverview(localStorage.getItem("token"))
     );
 
     document.getElementById("resetFilters")?.addEventListener(
         "click",
         () => {
-            startInput.value = "2022-02-11";
-            endInput.value = "2022-04-06";
-            document.getElementById("areaFilter").value = "";
-            loadOverview(token);
+            if (startInput) startInput.value = "2022-02-11";
+            if (endInput) endInput.value = "2022-04-06";
+
+            const areaInput = document.getElementById("areaFilter");
+            if (areaInput) areaInput.value = "";
+
+            loadOverview(localStorage.getItem("token"));
         }
     );
 
-    // Táº£i thá»‘ng kÃª Actual_Risk
+    // Tải thống kê Actual_Risk
     await loadActualRiskSummary(token);
 
-    // Táº£i dá»¯ liá»‡u tá»•ng quan
+    // Tải dữ liệu tổng quan
     await loadOverview(token);
 
-    // Thiáº¿t láº­p chuyá»ƒn tab Dashboard
+    // Thiết lập chuyển tab Dashboard
     setupReportTabs(token);
 }
 
-// Láº¥y dá»¯ liá»‡u API Dashboard Overview
+// Lấy dữ liệu API Dashboard Overview
 async function loadOverview(token) {
     const startDate = document.getElementById("startDate")?.value;
     const endDate = document.getElementById("endDate")?.value;
@@ -126,7 +131,7 @@ async function loadOverview(token) {
     const statusElement = document.getElementById("filterStatus");
 
     if (startDate && endDate && startDate > endDate) {
-        alert("NgÃ y báº¯t Ä‘áº§u khÃ´ng Ä‘Æ°á»£c lá»›n hÆ¡n ngÃ y káº¿t thÃºc.");
+        alert("Ngày bắt đầu không được lớn hơn ngày kết thúc.");
         return;
     }
 
@@ -138,7 +143,7 @@ async function loadOverview(token) {
 
     try {
         if (statusElement) {
-            statusElement.textContent = "Äang táº£i dá»¯ liá»‡u...";
+            statusElement.textContent = "Đang tải dữ liệu...";
         }
 
         const response = await fetch(
@@ -156,15 +161,16 @@ async function loadOverview(token) {
             localStorage.removeItem("token");
             localStorage.removeItem("role");
 
-            alert("PhiÃªn Ä‘Äƒng nháº­p háº¿t háº¡n hoáº·c báº¡n khÃ´ng cÃ³ quyá»n truy cáº­p.");
+            alert("Phiên đăng nhập hết hạn hoặc bạn không có quyền truy cập.");
             window.location.href = "index.html";
             return;
         }
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
+
             throw new Error(
-                errorData.detail || `API lá»—i HTTP ${response.status}`
+                errorData.detail || `API lỗi HTTP ${response.status}`
             );
         }
 
@@ -172,10 +178,10 @@ async function loadOverview(token) {
 
         console.log("Dashboard Overview:", data);
 
-        // Cáº­p nháº­t KPI
-        updateOverviewKPI(data.kpi);
+        // Cập nhật KPI
+        updateOverviewKPI(data.kpi || {});
 
-        // Cáº­p nháº­t cÃ¡c biá»ƒu Ä‘á»“
+        // Cập nhật các biểu đồ
         renderDailyTrendChart(data.daily_trend || []);
         renderWeatherChart(data.by_weather || []);
         renderTrafficAverageChart(data.by_traffic || []);
@@ -186,13 +192,13 @@ async function loadOverview(token) {
 
         if (statusElement) {
             statusElement.textContent =
-                `ÄÃ£ táº£i ${formatNumber(data.kpi.total_orders)} Ä‘Æ¡n hÃ ng`;
+                `Đã tải ${formatNumber(data.kpi?.total_orders)} đơn hàng`;
         }
 
-        // ÄÃ¡nh dáº¥u Pháº§n 2 cáº§n táº£i láº¡i khi bá»™ lá»c thay Ä‘á»•i
+        // Đánh dấu Phần 2 cần tải lại khi bộ lọc thay đổi
         section2Loaded = false;
 
-        // Náº¿u Ä‘ang má»Ÿ Pháº§n 2 thÃ¬ táº£i láº¡i dá»¯ liá»‡u
+        // Nếu đang mở Phần 2 thì tải lại dữ liệu
         const section2 = document.getElementById("section2");
 
         if (section2 && !section2.classList.contains("d-none")) {
@@ -200,17 +206,17 @@ async function loadOverview(token) {
         }
 
     } catch (error) {
-        console.error("KhÃ´ng thá»ƒ táº£i Dashboard Overview:", error);
+        console.error("Không thể tải Dashboard Overview:", error);
 
         if (statusElement) {
-            statusElement.textContent = "KhÃ´ng thá»ƒ táº£i dá»¯ liá»‡u";
+            statusElement.textContent = "Không thể tải dữ liệu";
         }
 
-        alert("Lá»—i táº£i dá»¯ liá»‡u Dashboard: " + error.message);
+        alert("Lỗi tải dữ liệu Dashboard: " + error.message);
     }
 }
 
-// Cáº­p nháº­t 4 KPI
+// Cập nhật 4 KPI
 function updateOverviewKPI(kpi) {
     document.getElementById("totalOrders").textContent =
         formatNumber(kpi.total_orders);
@@ -225,10 +231,11 @@ function updateOverviewKPI(kpi) {
         formatNumber(kpi.average_prep_time, 2);
 }
 
-// 1. Xu hÆ°á»›ng Ä‘Æ¡n hÃ ng vÃ  thá»i gian giao theo ngÃ y
+// 1. Xu hướng đơn hàng và thời gian giao trung bình
 function renderDailyTrendChart(items) {
     const labels = items.map(item => item.date);
     const orderCounts = items.map(item => Number(item.order_count) || 0);
+
     const deliveryTimes = items.map(item =>
         item.average_delivery_time === null
             ? null
@@ -242,14 +249,14 @@ function renderDailyTrendChart(items) {
             datasets: [
                 {
                     type: "bar",
-                    label: "Sá»‘ Ä‘Æ¡n hÃ ng",
+                    label: "Số đơn hàng",
                     data: orderCounts,
                     backgroundColor: "#0d6efd",
                     yAxisID: "y"
                 },
                 {
                     type: "line",
-                    label: "Thá»i gian giao trung bÃ¬nh (phÃºt)",
+                    label: "Thời gian giao trung bình (phút)",
                     data: deliveryTimes,
                     borderColor: "#dc3545",
                     backgroundColor: "#dc3545",
@@ -272,7 +279,7 @@ function renderDailyTrendChart(items) {
                     position: "left",
                     title: {
                         display: true,
-                        text: "Sá»‘ Ä‘Æ¡n hÃ ng"
+                        text: "Số đơn hàng"
                     }
                 },
                 y1: {
@@ -283,7 +290,7 @@ function renderDailyTrendChart(items) {
                     },
                     title: {
                         display: true,
-                        text: "Thá»i gian giao (phÃºt)"
+                        text: "Thời gian giao (phút)"
                     }
                 }
             }
@@ -291,17 +298,17 @@ function renderDailyTrendChart(items) {
     });
 }
 
-// 2. Thá»i gian giao theo thá»i tiáº¿t
+// 2. Thời gian giao theo thời tiết
 function renderWeatherChart(items) {
     const labels = items.map(item => item.value);
-    const values = items.map(item => item.average_delivery_time);
+    const values = items.map(item => Number(item.average_delivery_time) || 0);
 
     createChart("weatherChart", {
         type: "bar",
         data: {
             labels,
             datasets: [{
-                label: "Thá»i gian giao trung bÃ¬nh (phÃºt)",
+                label: "Thời gian giao trung bình (phút)",
                 data: values,
                 backgroundColor: "#0dcaf0",
                 borderRadius: 5
@@ -318,7 +325,7 @@ function renderWeatherChart(items) {
                     beginAtZero: true,
                     title: {
                         display: true,
-                        text: "PhÃºt"
+                        text: "Phút"
                     }
                 }
             }
@@ -326,19 +333,24 @@ function renderWeatherChart(items) {
     });
 }
 
-// 3. Thá»i gian giao theo giao thÃ´ng
+// 3. Thời gian giao theo giao thông
 function renderTrafficAverageChart(items) {
     const labels = items.map(item => item.value);
-    const values = items.map(item => item.average_delivery_time);
+    const values = items.map(item => Number(item.average_delivery_time) || 0);
 
     createChart("trafficChart", {
         type: "bar",
         data: {
             labels,
             datasets: [{
-                label: "Thá»i gian giao trung bÃ¬nh (phÃºt)",
+                label: "Thời gian giao trung bình (phút)",
                 data: values,
-                backgroundColor: ["#198754", "#ffc107", "#fd7e14", "#dc3545"],
+                backgroundColor: [
+                    "#198754",
+                    "#ffc107",
+                    "#fd7e14",
+                    "#dc3545"
+                ],
                 borderRadius: 5
             }]
         },
@@ -353,7 +365,7 @@ function renderTrafficAverageChart(items) {
                     beginAtZero: true,
                     title: {
                         display: true,
-                        text: "PhÃºt"
+                        text: "Phút"
                     }
                 }
             }
@@ -361,16 +373,21 @@ function renderTrafficAverageChart(items) {
     });
 }
 
-// 4. Sá»‘ Ä‘Æ¡n hÃ ng theo má»©c Ä‘á»™ giao thÃ´ng
+// 4. Số đơn hàng theo mức độ giao thông
 function renderTrafficCountChart(items) {
     createChart("trafficCountChart", {
         type: "doughnut",
         data: {
             labels: items.map(item => item.value),
             datasets: [{
-                label: "Sá»‘ Ä‘Æ¡n hÃ ng",
+                label: "Số đơn hàng",
                 data: items.map(item => Number(item.count) || 0),
-                backgroundColor: ["#198754", "#ffc107", "#fd7e14", "#dc3545"]
+                backgroundColor: [
+                    "#198754",
+                    "#ffc107",
+                    "#fd7e14",
+                    "#dc3545"
+                ]
             }]
         },
         options: {
@@ -385,14 +402,14 @@ function renderTrafficCountChart(items) {
     });
 }
 
-// 5. CÆ¡ cáº¥u Ä‘Æ¡n hÃ ng theo danh má»¥c
+// 5. Cơ cấu đơn hàng theo danh mục
 function renderCategoryChart(items) {
     createChart("categoryChart", {
         type: "doughnut",
         data: {
             labels: items.map(item => item.value),
             datasets: [{
-                label: "Sá»‘ Ä‘Æ¡n hÃ ng",
+                label: "Số đơn hàng",
                 data: items.map(item => Number(item.count) || 0),
                 backgroundColor: chartColors
             }]
@@ -407,7 +424,7 @@ function renderCategoryChart(items) {
                 tooltip: {
                     callbacks: {
                         label: context =>
-                            `${context.label}: ${formatNumber(context.raw)} Ä‘Æ¡n`
+                            `${context.label}: ${formatNumber(context.raw)} đơn`
                     }
                 }
             }
@@ -415,7 +432,7 @@ function renderCategoryChart(items) {
     });
 }
 
-// 6. Thá»i gian giao theo phÆ°Æ¡ng tiá»‡n vÃ  khu vá»±c
+// 6. Thời gian giao theo phương tiện và khu vực
 function renderVehicleAreaChart(items) {
     const areas = [...new Set(items.map(item => item.area))];
     const vehicles = [...new Set(items.map(item => item.vehicle))];
@@ -427,9 +444,11 @@ function renderVehicleAreaChart(items) {
                 item => item.area === area && item.vehicle === vehicle
             );
 
-            return record ? record.average_delivery_time : null;
+            return record
+                ? Number(record.average_delivery_time)
+                : null;
         }),
-        backgroundColor: chartColors[index]
+        backgroundColor: chartColors[index % chartColors.length]
     }));
 
     createChart("vehicleChart", {
@@ -450,7 +469,7 @@ function renderVehicleAreaChart(items) {
                     beginAtZero: true,
                     title: {
                         display: true,
-                        text: "Thá»i gian giao (phÃºt)"
+                        text: "Thời gian giao (phút)"
                     }
                 }
             }
@@ -458,7 +477,7 @@ function renderVehicleAreaChart(items) {
     });
 }
 
-// 7. PhÃ¢n bá»‘ Ä‘Æ¡n hÃ ng theo khu vá»±c
+// 7. Phân bố đơn hàng theo khu vực
 function renderAreaChart(items) {
     const areaCounts = {};
 
@@ -475,7 +494,7 @@ function renderAreaChart(items) {
         data: {
             labels,
             datasets: [{
-                label: "Sá»‘ Ä‘Æ¡n hÃ ng",
+                label: "Số đơn hàng",
                 data: values,
                 backgroundColor: "#0d6efd",
                 borderRadius: 5
@@ -492,79 +511,61 @@ function renderAreaChart(items) {
                     beginAtZero: true,
                     title: {
                         display: true,
-                        text: "Sá»‘ Ä‘Æ¡n hÃ ng"
+                        text: "Số đơn hàng"
                     }
                 }
-
             }
         }
     });
 }
-//  ==========================================
-//  PHáº¦N 2: PHÃ‚N TÃCH THá»œI GIAN VÃ€ KHOáº¢NG CÃCH
-//  ==========================================
 
-// 1. Chuyá»ƒn Ä‘á»•i giá»¯a cÃ¡c tab Dashboard
+// ==========================================
+// PHẦN 2: PHÂN TÍCH THỜI GIAN VÀ KHOẢNG CÁCH
+// ==========================================
+
+// 1. Chuyển đổi giữa các tab Dashboard
 function setupReportTabs(token) {
-
     document.querySelectorAll(".report-tab").forEach(button => {
-
         button.addEventListener("click", () => {
-
             const targetId = button.dataset.target;
 
-            // Cáº­p nháº­t tráº¡ng thÃ¡i nÃºt
+            // Cập nhật trạng thái nút
             document.querySelectorAll(".report-tab").forEach(tab => {
-
                 tab.classList.remove("btn-primary", "active");
                 tab.classList.add("btn-outline-primary");
-
             });
 
             button.classList.remove("btn-outline-primary");
             button.classList.add("btn-primary", "active");
 
-            // Hiá»ƒn thá»‹ section Ä‘Æ°á»£c chá»n
+            // Hiển thị section được chọn
             document.querySelectorAll(".report-section").forEach(section => {
-
                 section.classList.toggle(
                     "d-none",
                     section.id !== targetId
                 );
-
             });
 
-            // Táº£i dá»¯ liá»‡u Pháº§n 2 khi má»Ÿ tab
+            // Tải dữ liệu Phần 2 khi mở tab
             if (targetId === "section2") {
-
                 loadTimeDistanceDashboard(token);
 
                 setTimeout(() => {
-
                     if (section2Map) {
                         section2Map.invalidateSize();
                     }
-
                 }, 150);
-
             }
-
         });
-
     });
-
 }
 
-
-// 2. Gá»i API láº¥y dá»¯ liá»‡u Pháº§n 2
+// 2. Gọi API lấy dữ liệu Phần 2
 async function loadTimeDistanceDashboard(token, forceReload = false) {
-
     if (section2Loaded && !forceReload) {
-
         if (section2Map) {
             section2Map.invalidateSize();
         }
-
         return;
     }
 
@@ -581,29 +582,19 @@ async function loadTimeDistanceDashboard(token, forceReload = false) {
 
     const params = new URLSearchParams();
 
-    if (startDate) {
-        params.append("start_date", startDate);
-    }
-
-    if (endDate) {
-        params.append("end_date", endDate);
-    }
-
-    if (area) {
-        params.append("area", area);
-    }
+    if (startDate) params.append("start_date", startDate);
+    if (endDate) params.append("end_date", endDate);
+    if (area) params.append("area", area);
 
     if (status) {
-        status.textContent = "Äang táº£i dá»¯ liá»‡u phÃ¢n tÃ­ch...";
+        status.textContent = "Đang tải dữ liệu phân tích...";
     }
 
     try {
-
         const response = await fetch(
             `${API_BASE_URL}/api/orders/dashboard/time-distance?${params.toString()}`,
             {
                 method: "GET",
-
                 headers: {
                     Authorization: `Bearer ${token}`,
                     Accept: "application/json"
@@ -611,44 +602,37 @@ async function loadTimeDistanceDashboard(token, forceReload = false) {
             }
         );
 
-        // Kiá»ƒm tra quyá»n truy cáº­p
+        // Kiểm tra quyền truy cập
         if (response.status === 401 || response.status === 403) {
-
             localStorage.removeItem("token");
             localStorage.removeItem("role");
 
-            alert("PhiÃªn Ä‘Äƒng nháº­p háº¿t háº¡n hoáº·c báº¡n khÃ´ng cÃ³ quyá»n truy cáº­p.");
-
+            alert("Phiên đăng nhập hết hạn hoặc bạn không có quyền truy cập.");
             window.location.href = "index.html";
-
             return;
         }
 
         if (!response.ok) {
-
             const errorData = await response.json().catch(() => ({}));
 
             throw new Error(
-                errorData.detail || `API lá»—i HTTP ${response.status}`
+                errorData.detail || `API lỗi HTTP ${response.status}`
             );
-
         }
 
         const data = await response.json();
 
         console.log("Time Distance Dashboard:", data);
 
-        // Váº½ biá»ƒu Ä‘á»“
+        // Vẽ biểu đồ
         renderSection2AreaChart(data.by_area || []);
-
         renderSection2Scatter(data.scatter_points || []);
-
         renderSection2Histogram(data.histogram || []);
 
-        // Váº½ báº£n Ä‘á»“
+        // Vẽ bản đồ
         renderSection2Map(data.map_points || []);
 
-        // Ghi chÃº sá»‘ lÆ°á»£ng dá»¯ liá»‡u
+        // Ghi chú số lượng dữ liệu
         const mapNote = document.getElementById("s2MapNote");
 
         if (mapNote) {
@@ -658,38 +642,31 @@ async function loadTimeDistanceDashboard(token, forceReload = false) {
         const scatterNote = document.getElementById("s2ScatterNote");
 
         if (scatterNote) {
-
             scatterNote.textContent =
-                `Biá»ƒu Ä‘á»“ sá»­ dá»¥ng ${formatNumber(data.scatter_sample_count || 0)} Ä‘Æ¡n Ä‘Æ°á»£c láº¥y máº«u.`;
-
+                `Biểu đồ sử dụng ${formatNumber(data.scatter_sample_count || 0)} đơn được lấy mẫu.`;
         }
 
         if (status) {
-
             status.textContent =
-                `ÄÃ£ tá»•ng há»£p ${formatNumber(data.kpi?.total_orders || 0)} Ä‘Æ¡n hÃ ng`;
-
+                `Đã tổng hợp ${formatNumber(data.kpi?.total_orders || 0)} đơn hàng`;
         }
 
         section2Loaded = true;
 
         if (section2Map) {
-
             setTimeout(() => {
                 section2Map.invalidateSize();
             }, 150);
-
         }
 
     } catch (error) {
-
         console.error(
-            "KhÃ´ng thá»ƒ táº£i phÃ¢n tÃ­ch thá»i gian vÃ  khoáº£ng cÃ¡ch:",
+            "Không thể tải phân tích thời gian và khoảng cách:",
             error
         );
 
         if (status) {
-            status.textContent = "KhÃ´ng thá»ƒ táº£i dá»¯ liá»‡u";
+            status.textContent = "Không thể tải dữ liệu";
         }
 
         const mapNote = document.getElementById("s2MapNote");
@@ -697,95 +674,57 @@ async function loadTimeDistanceDashboard(token, forceReload = false) {
         if (mapNote) {
             mapNote.textContent = error.message;
         }
-
     }
-
 }
 
-
-// 3. Biá»ƒu Ä‘á»“ so sÃ¡nh thá»i gian chuáº©n bá»‹ vÃ  giao hÃ ng
+// 3. Biểu đồ so sánh thời gian chuẩn bị và giao hàng
 function renderSection2AreaChart(items) {
-
     createChart("s2AreaTimeChart", {
-
         type: "bar",
-
         data: {
-
             labels: items.map(item => item.area || "Unknown"),
-
             datasets: [
-
                 {
-                    label: "Thá»i gian chuáº©n bá»‹ (phÃºt)",
-
-                    data: items.map(item => item.average_prep_time),
-
+                    label: "Thời gian chuẩn bị (phút)",
+                    data: items.map(item => Number(item.average_prep_time) || 0),
                     backgroundColor: "#6B91B8",
-
                     borderRadius: 4
                 },
-
                 {
-                    label: "Thá»i gian giao hÃ ng (phÃºt)",
-
-                    data: items.map(item => item.average_delivery_time),
-
+                    label: "Thời gian giao hàng (phút)",
+                    data: items.map(item => Number(item.average_delivery_time) || 0),
                     backgroundColor: "#D49A62",
-
                     borderRadius: 4
                 }
-
             ]
-
         },
-
         options: {
-
             responsive: true,
-
             maintainAspectRatio: false,
-
             interaction: {
                 mode: "index",
                 intersect: false
             },
-
             scales: {
-
                 y: {
-
                     beginAtZero: true,
-
                     title: {
                         display: true,
-                        text: "Thá»i gian (phÃºt)"
+                        text: "Thời gian (phút)"
                     }
-
                 }
-
             }
-
         }
-
     });
-
 }
 
-
-// 4. Biá»ƒu Ä‘á»“ phÃ¢n tÃ¡n khoáº£ng cÃ¡ch vÃ  thá»i gian giao hÃ ng
+// 4. Biểu đồ phân tán khoảng cách và thời gian giao hàng
 function renderSection2Scatter(items) {
-
     const colors = {
-
         High: "#547FA3",
-
         Medium: "#8B9A8A",
-
         Low: "#D49A62",
-
         Jam: "#B77C7C"
-
     };
 
     const trafficTypes = [
@@ -793,191 +732,116 @@ function renderSection2Scatter(items) {
     ];
 
     createChart("s2DistanceScatterChart", {
-
         type: "scatter",
-
         data: {
-
             datasets: trafficTypes.map(traffic => ({
-
                 label: traffic,
-
                 data: items
-
-                    .filter(item =>
-                        (item.traffic || "Unknown") === traffic
-                    )
-
+                    .filter(item => (item.traffic || "Unknown") === traffic)
                     .map(item => ({
-
                         x: Number(item.distance_km),
-
                         y: Number(item.delivery_time)
-
                     }))
-
                     .filter(point =>
                         Number.isFinite(point.x) &&
                         Number.isFinite(point.y)
                     ),
-
                 backgroundColor: colors[traffic] || "#7c8798",
-
                 pointRadius: 3,
-
                 pointHoverRadius: 5
-
             }))
-
         },
-
         options: {
-
             responsive: true,
-
             maintainAspectRatio: false,
-
             scales: {
-
                 x: {
-
                     beginAtZero: true,
-
                     title: {
                         display: true,
-                        text: "Khoáº£ng cÃ¡ch (km)"
+                        text: "Khoảng cách (km)"
                     }
-
                 },
-
                 y: {
-
                     beginAtZero: true,
-
                     title: {
                         display: true,
-                        text: "Thá»i gian giao hÃ ng (phÃºt)"
+                        text: "Thời gian giao hàng (phút)"
                     }
-
                 }
-
             },
-
             plugins: {
-
                 tooltip: {
-
                     callbacks: {
-
                         label: context =>
-
-                            `${context.dataset.label}: ${context.parsed.x.toFixed(2)} km, ${context.parsed.y.toFixed(1)} phÃºt`
-
+                            `${context.dataset.label}: ${context.parsed.x.toFixed(2)} km, ${context.parsed.y.toFixed(1)} phút`
                     }
-
                 }
-
             }
-
         }
-
     });
-
 }
 
-
-// 5. Biá»ƒu Ä‘á»“ phÃ¢n bá»‘ thá»i gian giao hÃ ng
+// 5. Biểu đồ phân bố thời gian giao hàng
 function renderSection2Histogram(items) {
-
     createChart("s2DeliveryHistogram", {
-
         type: "bar",
-
         data: {
-
             labels: items.map(item => item.range),
-
-            datasets: [
-
-                {
-
-                    label: "Sá»‘ Ä‘Æ¡n hÃ ng",
-
-                    data: items.map(item => Number(item.count) || 0),
-
-                    backgroundColor: "#D49A62",
-
-                    borderRadius: 3
-
-                }
-
-            ]
-
+            datasets: [{
+                label: "Số đơn hàng",
+                data: items.map(item => Number(item.count) || 0),
+                backgroundColor: "#D49A62",
+                borderRadius: 3
+            }]
         },
-
         options: {
-
             responsive: true,
-
             maintainAspectRatio: false,
-
             plugins: {
                 legend: {
                     display: false
                 }
             },
-
             scales: {
-
                 x: {
-
                     title: {
                         display: true,
-                        text: "Thá»i gian giao hÃ ng (phÃºt)"
+                        text: "Thời gian giao hàng (phút)"
                     }
-
                 },
-
                 y: {
-
                     beginAtZero: true,
-
                     title: {
                         display: true,
-                        text: "Sá»‘ Ä‘Æ¡n hÃ ng"
+                        text: "Số đơn hàng"
                     }
-
                 }
-
             }
-
         }
-
     });
-
 }
 
-
-// 6. Báº£n Ä‘á»“ phÃ¢n bá»‘ Ä‘iá»ƒm giao hÃ ng
+// 6. Bản đồ phân bố điểm giao hàng
 function renderSection2Map(items) {
-
     const mapElement = document.getElementById("section2Map");
 
     if (!mapElement) return;
 
-    // Kiá»ƒm tra thÆ° viá»‡n Leaflet
+    // Kiểm tra thư viện Leaflet
     if (typeof L === "undefined") {
+        const mapNote = document.getElementById("s2MapNote");
 
-        document.getElementById("s2MapNote").textContent =
-            "KhÃ´ng táº£i Ä‘Æ°á»£c thÆ° viá»‡n báº£n Ä‘á»“ Leaflet. Kiá»ƒm tra káº¿t ná»‘i Internet.";
+        if (mapNote) {
+            mapNote.textContent =
+                "Không tải được thư viện bản đồ Leaflet. Kiểm tra kết nối Internet.";
+        }
 
         return;
-
     }
 
-    // Khá»Ÿi táº¡o báº£n Ä‘á»“ láº§n Ä‘áº§u
+    // Khởi tạo bản đồ lần đầu
     if (!section2Map) {
-
         section2Map = L.map("section2Map").setView([20, 78], 4);
 
         L.tileLayer(
@@ -989,25 +853,20 @@ function renderSection2Map(items) {
         ).addTo(section2Map);
 
         section2MapLayer = L.layerGroup().addTo(section2Map);
-
     }
 
-    // XÃ³a cÃ¡c Ä‘iá»ƒm cÅ©
+    // Xóa các điểm cũ
     section2MapLayer.clearLayers();
 
     const bounds = [];
 
     items.forEach(item => {
-
         const storeLat = Number(item.Store_Latitude);
-
         const storeLng = Number(item.Store_Longitude);
-
         const dropLat = Number(item.Drop_Latitude);
-
         const dropLng = Number(item.Drop_Longitude);
 
-        // Kiá»ƒm tra tá»a Ä‘á»™
+        // Kiểm tra tọa độ
         if (
             ![
                 storeLat,
@@ -1020,57 +879,37 @@ function renderSection2Map(items) {
         }
 
         const store = [storeLat, storeLng];
-
         const drop = [dropLat, dropLng];
 
         bounds.push(store, drop);
 
-        // Äiá»ƒm cá»­a hÃ ng
+        // Điểm cửa hàng
         L.circleMarker(store, {
-
             radius: 4,
-
             color: "#547FA3",
-
             fillColor: "#6B91B8",
-
             fillOpacity: 0.75
-
         })
+            .bindPopup("Điểm cửa hàng")
+            .addTo(section2MapLayer);
 
-        .bindPopup("Äiá»ƒm cá»­a hÃ ng")
-
-        .addTo(section2MapLayer);
-
-
-        // Äiá»ƒm giao hÃ ng
+        // Điểm giao hàng
         L.circleMarker(drop, {
-
             radius: 4,
-
             color: "#B77C7C",
-
             fillColor: "#D49A62",
-
             fillOpacity: 0.7
-
         })
-
-        .bindPopup(
-
-            `Äiá»ƒm giao hÃ ng<br>
-            Khu vá»±c: ${item.Area || "N/A"}<br>
-            Thá»i gian giao: ${formatNumber(item.Delivery_Time, 1)} phÃºt`
-
-        )
-
-        .addTo(section2MapLayer);
-
+            .bindPopup(`
+                <strong>Điểm giao hàng</strong><br>
+                Khu vực: ${item.Area || "N/A"}<br>
+                Thời gian giao: ${formatNumber(item.Delivery_Time, 1)} phút
+            `)
+            .addTo(section2MapLayer);
     });
 
-    // Tá»± Ä‘á»™ng cÄƒn chá»‰nh báº£n Ä‘á»“ theo vá»‹ trÃ­ dá»¯ liá»‡u
+    // Tự động căn chỉnh bản đồ theo vị trí dữ liệu
     if (bounds.length) {
-
         section2Map.fitBounds(
             bounds,
             {
@@ -1078,16 +917,12 @@ function renderSection2Map(items) {
                 maxZoom: 8
             }
         );
-
     } else {
-
         section2Map.setView([20, 78], 4);
-
     }
-
 }
 
-// 7. Thá»‘ng kÃª nguy cÆ¡ giao trá»… thá»±c táº¿
+// 7. Thống kê nguy cơ giao trễ thực tế
 async function loadActualRiskSummary(token) {
     const riskElement = document.getElementById("lateOrderRate");
     const detailElement = document.getElementById("lateOrderRateDetail");
@@ -1106,33 +941,33 @@ async function loadActualRiskSummary(token) {
         );
 
         if (!response.ok) {
-            throw new Error(`API Actual_Risk lá»—i HTTP ${response.status}`);
+            throw new Error(`API Actual_Risk lỗi HTTP ${response.status}`);
         }
 
         const result = await response.json();
 
-        riskElement.textContent =
-            formatNumber(result.risk_count);
+        riskElement.textContent = formatNumber(result.risk_count);
 
         if (detailElement) {
             detailElement.textContent =
-                `${formatNumber(result.risk_rate, 2)}% trÃªn ` +
-                `${formatNumber(result.total_labeled)} Ä‘Æ¡n cÃ³ nhÃ£n`;
+                `${formatNumber(result.risk_rate, 2)}% trên ` +
+                `${formatNumber(result.total_labeled)} đơn có nhãn`;
         }
 
     } catch (error) {
-        console.error("KhÃ´ng thá»ƒ táº£i Actual_Risk:", error);
+        console.error("Không thể tải Actual_Risk:", error);
 
         riskElement.textContent = "N/A";
 
         if (detailElement) {
-            detailElement.textContent = "KhÃ´ng thá»ƒ táº£i dá»¯ liá»‡u rá»§i ro";
+            detailElement.textContent =
+                "Không thể tải dữ liệu rủi ro";
         }
     }
 }
 
 // ==========================================
-// PHAN 03 - KHU VUC VA PHUONG TIEN
+// PHẦN 03 - KHU VỰC VÀ PHƯƠNG TIỆN
 // ==========================================
 
 async function loadAreaVehicleDashboard(token) {
@@ -1141,7 +976,7 @@ async function loadAreaVehicleDashboard(token) {
     const area = document.getElementById("area3Filter")?.value || "";
 
     if (startDate && endDate && startDate > endDate) {
-        alert("NgÃ y báº¯t Ä‘áº§u khÃ´ng Ä‘Æ°á»£c lá»›n hÆ¡n ngÃ y káº¿t thÃºc.");
+        alert("Ngày bắt đầu không được lớn hơn ngày kết thúc.");
         return;
     }
 
@@ -1166,14 +1001,18 @@ async function loadAreaVehicleDashboard(token) {
         if (response.status === 401 || response.status === 403) {
             localStorage.removeItem("token");
             localStorage.removeItem("role");
-            alert("PhiÃªn Ä‘Äƒng nháº­p háº¿t háº¡n hoáº·c báº¡n khÃ´ng cÃ³ quyá»n truy cáº­p.");
+
+            alert("Phiên đăng nhập hết hạn hoặc bạn không có quyền truy cập.");
             window.location.href = "index.html";
             return;
         }
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.detail || `API lá»—i HTTP ${response.status}`);
+
+            throw new Error(
+                errorData.detail || `API lỗi HTTP ${response.status}`
+            );
         }
 
         const data = await response.json();
@@ -1181,44 +1020,60 @@ async function loadAreaVehicleDashboard(token) {
         console.log("Area Vehicle Dashboard:", data);
 
         // KPI
-        document.getElementById("area3FastestArea").textContent =
-            data.fastest_area?.area || "KhÃ´ng cÃ³ dá»¯ liá»‡u";
+        const fastestArea = document.getElementById("area3FastestArea");
+        const fastestVehicle = document.getElementById("area3FastestVehicle");
+        const averageDistance = document.getElementById("area3AverageDistance");
 
-        document.getElementById("area3FastestVehicle").textContent =
-            data.fastest_vehicle?.vehicle || "KhÃ´ng cÃ³ dá»¯ liá»‡u";
+        if (fastestArea) {
+            fastestArea.textContent =
+                data.fastest_area?.area || "Không có dữ liệu";
+        }
 
-        document.getElementById("area3AverageDistance").textContent =
-            Number(data.kpi?.average_distance || 0).toFixed(2);
+        if (fastestVehicle) {
+            fastestVehicle.textContent =
+                data.fastest_vehicle?.vehicle || "Không có dữ liệu";
+        }
 
-        // Biá»ƒu Ä‘á»“ cÆ¡ cáº¥u phÆ°Æ¡ng tiá»‡n theo khu vá»±c
+        if (averageDistance) {
+            averageDistance.textContent =
+                Number(data.kpi?.average_distance || 0).toFixed(2);
+        }
+
+        // Biểu đồ cơ cấu phương tiện theo khu vực
         renderArea3VehicleChart(data.by_area_vehicle || []);
 
-        // Biá»ƒu Ä‘á»“ thá»i gian giao hÃ ng theo khu vá»±c
+        // Biểu đồ thời gian giao hàng theo khu vực
         renderArea3DeliveryChart(data.by_area || []);
 
-        // Biá»ƒu Ä‘á»“ khoáº£ng cÃ¡ch theo khu vá»±c
+        // Biểu đồ khoảng cách theo khu vực
         renderArea3DistanceChart(data.by_area || []);
 
-        // Báº£ng phÃ¢n tÃ­ch khu vá»±c vÃ  phÆ°Æ¡ng tiá»‡n
+        // Bảng phân tích khu vực và phương tiện
         renderArea3MatrixTable(data.by_area_vehicle || []);
 
     } catch (error) {
-        console.error("Lá»—i táº£i dá»¯ liá»‡u Pháº§n 03:", error);
-        alert("KhÃ´ng thá»ƒ táº£i dá»¯ liá»‡u Pháº§n 03: " + error.message);
+        console.error("Lỗi tải dữ liệu Phần 03:", error);
+        alert("Không thể tải dữ liệu Phần 03: " + error.message);
     }
 }
 
-// Khá»Ÿi táº¡o bá»™ lá»c riÃªng cho Pháº§n 03
-function initArea3Filters(token) {
+// Khởi tạo bộ lọc riêng cho Phần 03 (chỉ gắn sự kiện một lần)
+let area3FiltersInitialized = false;
+
+function initArea3Filters() {
+    if (area3FiltersInitialized) return;
+
     const startInput = document.getElementById("area3StartDate");
     const endInput = document.getElementById("area3EndDate");
     const areaInput = document.getElementById("area3Filter");
 
     if (!startInput || !endInput || !areaInput) return;
 
+    area3FiltersInitialized = true;
+
     document.getElementById("area3ApplyFilters")?.addEventListener(
         "click",
-        () => loadAreaVehicleDashboard(token)
+        () => loadAreaVehicleDashboard(localStorage.getItem("token"))
     );
 
     document.getElementById("area3ResetFilters")?.addEventListener(
@@ -1227,21 +1082,23 @@ function initArea3Filters(token) {
             startInput.value = "2022-02-11";
             endInput.value = "2022-04-06";
             areaInput.value = "";
-            loadAreaVehicleDashboard(token);
+
+            loadAreaVehicleDashboard(localStorage.getItem("token"));
         }
     );
 }
 
 // ==========================================
-// CAC BIEU DO PHAN 03
+// CÁC BIỂU ĐỒ PHẦN 03
 // ==========================================
 
-// 1. Co cau phuong tien theo khu vuc
+// 1. Cơ cấu phương tiện theo khu vực
 function renderArea3VehicleChart(rows) {
     const vehicleTotals = {};
 
     rows.forEach(item => {
-        const vehicle = item.vehicle || "KhÃ¡c";
+        const vehicle = item.vehicle || "Khác";
+
         vehicleTotals[vehicle] =
             (vehicleTotals[vehicle] || 0) + Number(item.order_count || 0);
     });
@@ -1259,11 +1116,13 @@ function renderArea3VehicleChart(rows) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { position: "bottom" },
+                legend: {
+                    position: "bottom"
+                },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return `${context.label}: ${context.parsed.toLocaleString("vi-VN")} Ä‘Æ¡n`;
+                            return `${context.label}: ${context.parsed.toLocaleString("vi-VN")} đơn`;
                         }
                     }
                 }
@@ -1272,14 +1131,14 @@ function renderArea3VehicleChart(rows) {
     });
 }
 
-// 2. Thoi gian giao hang trung binh theo khu vuc
+// 2. Thời gian giao hàng trung bình theo khu vực
 function renderArea3DeliveryChart(rows) {
     createChart("area3DeliveryChart", {
         type: "bar",
         data: {
             labels: rows.map(item => item.area),
             datasets: [{
-                label: "Thá»i gian giao trung bÃ¬nh (phÃºt)",
+                label: "Thời gian giao trung bình (phút)",
                 data: rows.map(item => Number(item.average_delivery_time || 0)),
                 backgroundColor: "#4e79a7"
             }]
@@ -1289,14 +1148,16 @@ function renderArea3DeliveryChart(rows) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { display: false }
+                legend: {
+                    display: false
+                }
             },
             scales: {
                 x: {
                     beginAtZero: true,
                     title: {
                         display: true,
-                        text: "PhÃºt"
+                        text: "Phút"
                     }
                 }
             }
@@ -1304,14 +1165,14 @@ function renderArea3DeliveryChart(rows) {
     });
 }
 
-// 3. Khoang cach giao hang trung binh theo khu vuc
+// 3. Khoảng cách giao hàng trung bình theo khu vực
 function renderArea3DistanceChart(rows) {
     createChart("area3DistanceChart", {
         type: "bar",
         data: {
             labels: rows.map(item => item.area),
             datasets: [{
-                label: "Khoáº£ng cÃ¡ch trung bÃ¬nh (km)",
+                label: "Khoảng cách trung bình (km)",
                 data: rows.map(item => Number(item.average_distance || 0)),
                 backgroundColor: "#f28e2b"
             }]
@@ -1321,7 +1182,9 @@ function renderArea3DistanceChart(rows) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { display: false }
+                legend: {
+                    display: false
+                }
             },
             scales: {
                 x: {
@@ -1336,7 +1199,7 @@ function renderArea3DistanceChart(rows) {
     });
 }
 
-// 4. Bang phan tich khu vuc va phuong tien
+// 4. Bảng phân tích khu vực và phương tiện
 function renderArea3MatrixTable(rows) {
     const tbody = document.querySelector("#area3MatrixTable tbody");
 
@@ -1347,7 +1210,7 @@ function renderArea3MatrixTable(rows) {
     if (!rows.length) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="4">KhÃ´ng cÃ³ dá»¯ liá»‡u</td>
+                <td colspan="4">Không có dữ liệu</td>
             </tr>
         `;
         return;
@@ -1361,14 +1224,27 @@ function renderArea3MatrixTable(rows) {
         "Urban"
     ];
 
-    const vehicleOrder = ["Motorcycle", "Scooter", "Van"];
+    const vehicleOrder = [
+        "Motorcycle",
+        "Scooter",
+        "Van"
+    ];
 
     const sortedRows = [...rows].sort((a, b) => {
-        const areaDiff = areaOrder.indexOf(a.area) - areaOrder.indexOf(b.area);
+        const areaA = areaOrder.indexOf(a.area);
+        const areaB = areaOrder.indexOf(b.area);
+
+        const areaDiff =
+            (areaA === -1 ? 999 : areaA) -
+            (areaB === -1 ? 999 : areaB);
 
         if (areaDiff !== 0) return areaDiff;
 
-        return vehicleOrder.indexOf(a.vehicle) - vehicleOrder.indexOf(b.vehicle);
+        const vehicleA = vehicleOrder.indexOf(a.vehicle);
+        const vehicleB = vehicleOrder.indexOf(b.vehicle);
+
+        return (vehicleA === -1 ? 999 : vehicleA) -
+            (vehicleB === -1 ? 999 : vehicleB);
     });
 
     sortedRows.forEach(item => {
@@ -1383,27 +1259,26 @@ function renderArea3MatrixTable(rows) {
 
         values.forEach(value => {
             const td = document.createElement("td");
-            td.textContent = value;
+            td.textContent = value ?? "N/A";
             tr.appendChild(td);
         });
 
         tbody.appendChild(tr);
     });
 }
-
 // ==========================================
-// PHAN 04 - DU DOAN NGUY CO GIAO TRE
+// PHẦN 04 - DỰ ĐOÁN NGUY CƠ GIAO TRỄ
 // ==========================================
 
-// Tai du lieu phan tich rui ro tu API
+// Tải dữ liệu phân tích rủi ro từ API
 async function loadRiskDashboard(token) {
-    let currentStep = "Báº¯t Ä‘áº§u táº£i dá»¯ liá»‡u";
+    let currentStep = "Bắt đầu tải dữ liệu";
 
     try {
-        console.log("ÄÃƒ Gá»ŒI loadRiskDashboard");
+        console.log("ĐÃ GỌI loadRiskDashboard");
 
-        // BÆ°á»›c 1: Gá»i API
-        currentStep = "Gá»i API";
+        // Bước 1: Gọi API
+        currentStep = "Gọi API";
 
         const response = await fetch(
             `${API_BASE_URL}/api/predict/dashboard/risk-analysis`,
@@ -1418,78 +1293,110 @@ async function loadRiskDashboard(token) {
 
         console.log("API STATUS:", response.status);
 
-        // BÆ°á»›c 2: Kiá»ƒm tra xÃ¡c thá»±c
+        // Bước 2: Kiểm tra xác thực
         if (response.status === 401 || response.status === 403) {
             localStorage.removeItem("token");
             localStorage.removeItem("role");
 
-            alert("PhiÃªn Ä‘Äƒng nháº­p háº¿t háº¡n. Vui lÃ²ng Ä‘Äƒng nháº­p láº¡i.");
+            alert("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");
             window.location.href = "index.html";
             return;
         }
 
-        // BÆ°á»›c 3: Kiá»ƒm tra pháº£n há»“i API
-        currentStep = "Äá»c dá»¯ liá»‡u API";
+        // Bước 3: Kiểm tra phản hồi API
+        currentStep = "Đọc dữ liệu API";
 
         const data = await response.json();
 
         if (!response.ok) {
             throw new Error(
-                data.detail || `API lá»—i HTTP ${response.status}`
+                data.detail || `API lỗi HTTP ${response.status}`
             );
         }
 
         console.log("RISK DASHBOARD DATA:", data);
 
-        // BÆ°á»›c 4: Kiá»ƒm tra dá»¯ liá»‡u KPI
-        currentStep = "Cáº­p nháº­t KPI";
+        // Bước 4: Kiểm tra dữ liệu KPI
+        currentStep = "Cập nhật KPI";
 
         if (!data.kpi) {
-            throw new Error("API khÃ´ng tráº£ vá» dá»¯ liá»‡u KPI");
+            throw new Error("API không trả về dữ liệu KPI");
         }
 
-        document.getElementById("riskTotalOrders").textContent =
-            formatNumber(data.kpi.risk_count);
+        const riskTotalOrders =
+            document.getElementById("riskTotalOrders");
 
-        document.getElementById("riskAverageProbability").textContent =
-            formatNumber(data.kpi.average_probability * 100, 2) + "%";
+        const riskAverageProbability =
+            document.getElementById("riskAverageProbability");
 
-        document.getElementById("riskRate").textContent =
-            formatNumber(data.kpi.risk_rate, 2) + "%";
+        const riskRate =
+            document.getElementById("riskRate");
 
-        document.getElementById("riskGaugeValue").textContent =
-            formatNumber(data.kpi.risk_rate, 2) + "%";
+        const riskGaugeValue =
+            document.getElementById("riskGaugeValue");
 
-        // BÆ°á»›c 5: Váº½ biá»ƒu Ä‘á»“ theo khu vá»±c vÃ  phÆ°Æ¡ng tiá»‡n
-        currentStep = "Váº½ biá»ƒu Ä‘á»“ khu vá»±c vÃ  phÆ°Æ¡ng tiá»‡n";
+        if (riskTotalOrders) {
+            riskTotalOrders.textContent =
+                formatNumber(data.kpi.risk_count);
+        }
+
+        if (riskAverageProbability) {
+            riskAverageProbability.textContent =
+                formatNumber(data.kpi.average_probability * 100, 2) + "%";
+        }
+
+        if (riskRate) {
+            riskRate.textContent =
+                formatNumber(data.kpi.risk_rate, 2) + "%";
+        }
+
+        if (riskGaugeValue) {
+            riskGaugeValue.textContent =
+                formatNumber(data.kpi.risk_rate, 2) + "%";
+        }
+
+        // Bước 5: Vẽ biểu đồ theo khu vực và phương tiện
+        currentStep = "Vẽ biểu đồ khu vực và phương tiện";
 
         renderRiskAreaVehicleChart(data.by_area_vehicle || []);
 
-        // BÆ°á»›c 6: Váº½ biá»ƒu Ä‘á»“ má»©c Ä‘á»™ rá»§i ro
-        currentStep = "Váº½ biá»ƒu Ä‘á»“ má»©c Ä‘á»™ rá»§i ro";
+        // Bước 6: Vẽ biểu đồ mức độ rủi ro
+        currentStep = "Vẽ biểu đồ mức độ rủi ro";
 
         renderRiskGaugeChart(data.kpi.risk_rate || 0);
 
-        // BÆ°á»›c 7: Váº½ biá»ƒu Ä‘á»“ phÃ¢n phá»‘i rá»§i ro
-        currentStep = "Váº½ biá»ƒu Ä‘á»“ phÃ¢n phá»‘i rá»§i ro";
+        // Bước 7: Vẽ biểu đồ phân phối rủi ro
+        currentStep = "Vẽ biểu đồ phân phối rủi ro";
 
         renderRiskDistributionChart(data.risk_distribution || []);
 
-        // BÆ°á»›c 8: Hiá»ƒn thá»‹ báº£ng Ä‘Æ¡n hÃ ng kháº©n cáº¥p
-        currentStep = "Hiá»ƒn thá»‹ báº£ng Ä‘Æ¡n hÃ ng";
+        // Bước 8: Hiển thị bảng đơn hàng khẩn cấp
+        currentStep = "Hiển thị bảng đơn hàng";
 
         renderUrgentOrdersTable(data.urgent_orders || []);
 
-        console.log("Dashboard 04 Ä‘Ã£ táº£i dá»¯ liá»‡u thÃ nh cÃ´ng!");
+        console.log("Dashboard 04 đã tải dữ liệu thành công!");
 
     } catch (error) {
-        console.error("Lá»—i táº¡i Dashboard 04:", error);
-        console.error("Lá»—i xáº£y ra táº¡i bÆ°á»›c:", currentStep);
+        console.error("Lỗi tại Dashboard 04:", error);
+        console.error("Lỗi xảy ra tại bước:", currentStep);
 
-        document.getElementById("riskTotalOrders").textContent = "N/A";
-        document.getElementById("riskAverageProbability").textContent = "N/A";
-        document.getElementById("riskRate").textContent = "N/A";
-        document.getElementById("riskGaugeValue").textContent = "N/A";
+        const riskTotalOrders =
+            document.getElementById("riskTotalOrders");
+
+        const riskAverageProbability =
+            document.getElementById("riskAverageProbability");
+
+        const riskRate =
+            document.getElementById("riskRate");
+
+        const riskGaugeValue =
+            document.getElementById("riskGaugeValue");
+
+        if (riskTotalOrders) riskTotalOrders.textContent = "N/A";
+        if (riskAverageProbability) riskAverageProbability.textContent = "N/A";
+        if (riskRate) riskRate.textContent = "N/A";
+        if (riskGaugeValue) riskGaugeValue.textContent = "N/A";
 
         const tbody = document.getElementById("urgentOrdersTable");
 
@@ -1497,29 +1404,29 @@ async function loadRiskDashboard(token) {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="4" class="text-center text-danger">
-                        KhÃ´ng thá»ƒ táº£i dá»¯ liá»‡u
+                        Không thể tải dữ liệu
                     </td>
                 </tr>
             `;
         }
 
         alert(
-            "KhÃ´ng thá»ƒ táº£i Dashboard Pháº§n 04: " +
+            "Không thể tải Dashboard Phần 04: " +
             error.message +
-            "\nBÆ°á»›c xáº£y ra lá»—i: " +
+            "\nBước xảy ra lỗi: " +
             currentStep
         );
     }
 }
 
-// 1. So don co nguy co theo khu vuc va phuong tien
+// 1. Số đơn có nguy cơ theo khu vực và phương tiện
 function renderRiskAreaVehicleChart(items) {
     const areas = [...new Set(items.map(item => item.area))];
-
     const vehicles = [...new Set(items.map(item => item.vehicle))];
 
     const datasets = vehicles.map((vehicle, index) => ({
         label: vehicle,
+
         data: areas.map(area => {
             const record = items.find(
                 item =>
@@ -1527,9 +1434,12 @@ function renderRiskAreaVehicleChart(items) {
                     item.vehicle === vehicle
             );
 
-            return record ? Number(record.risk_count || 0) : 0;
+            return record
+                ? Number(record.risk_count || 0)
+                : 0;
         }),
-        backgroundColor: chartColors[index],
+
+        backgroundColor: chartColors[index % chartColors.length],
         borderRadius: 4
     }));
 
@@ -1553,7 +1463,7 @@ function renderRiskAreaVehicleChart(items) {
                 tooltip: {
                     callbacks: {
                         label: context =>
-                            `${context.dataset.label}: ${formatNumber(context.raw)} don`
+                            `${context.dataset.label}: ${formatNumber(context.raw)} đơn`
                     }
                 }
             },
@@ -1562,7 +1472,7 @@ function renderRiskAreaVehicleChart(items) {
                     beginAtZero: true,
                     title: {
                         display: true,
-                        text: "So don co nguy co"
+                        text: "Số đơn có nguy cơ"
                     }
                 }
             }
@@ -1570,17 +1480,29 @@ function renderRiskAreaVehicleChart(items) {
     });
 }
 
-// 2. Gauge - Muc do rui ro he thong
+// 2. Gauge - Mức độ rủi ro hệ thống
 function renderRiskGaugeChart(riskRate) {
-    const value = Math.min(Math.max(Number(riskRate) || 0, 0), 100);
+    const value = Math.min(
+        Math.max(Number(riskRate) || 0, 0),
+        100
+    );
 
     createChart("riskGaugeChart", {
         type: "doughnut",
         data: {
-            labels: ["Nguy co", "Phan con lai"],
+            labels: [
+                "Nguy cơ",
+                "Phần còn lại"
+            ],
             datasets: [{
-                data: [value, 100 - value],
-                backgroundColor: ["#dc3545", "#e9ecef"],
+                data: [
+                    value,
+                    100 - value
+                ],
+                backgroundColor: [
+                    "#dc3545",
+                    "#e9ecef"
+                ],
                 borderWidth: 0,
                 circumference: 180,
                 rotation: 270,
@@ -1602,16 +1524,20 @@ function renderRiskGaugeChart(riskRate) {
     });
 }
 
-// 3. Phan bo don an toan va don co nguy co
+// 3. Phân bố đơn an toàn và đơn có nguy cơ
 function renderRiskDistributionChart(items) {
     createChart("riskDistributionChart", {
         type: "doughnut",
         data: {
             labels: items.map(item => item.label),
             datasets: [{
-                label: "So don hang",
+                label: "Số đơn hàng",
                 data: items.map(item => Number(item.count) || 0),
-                backgroundColor: ["#B8A99A", "#6D9B83", "#C65D52"],
+                backgroundColor: [
+                    "#B8A99A",
+                    "#6D9B83",
+                    "#C65D52"
+                ],
                 borderWidth: 1
             }]
         },
@@ -1625,7 +1551,7 @@ function renderRiskDistributionChart(items) {
                 tooltip: {
                     callbacks: {
                         label: context =>
-                            `${context.label}: ${formatNumber(context.raw)} don`
+                            `${context.label}: ${formatNumber(context.raw)} đơn`
                     }
                 }
             }
@@ -1633,7 +1559,7 @@ function renderRiskDistributionChart(items) {
     });
 }
 
-// 4. Bang 20 don hang co xac suat rui ro cao nhat
+// 4. Bảng 20 đơn hàng có xác suất rủi ro cao nhất
 function renderUrgentOrdersTable(items) {
     const tbody = document.getElementById("urgentOrdersTable");
 
@@ -1645,7 +1571,7 @@ function renderUrgentOrdersTable(items) {
         tbody.innerHTML = `
             <tr>
                 <td colspan="4" class="text-center">
-                    Khong co don hang nguy co
+                    Không có đơn hàng nguy cơ
                 </td>
             </tr>
         `;
@@ -1655,11 +1581,15 @@ function renderUrgentOrdersTable(items) {
     items.forEach(item => {
         const tr = document.createElement("tr");
 
+        const probability = Number(item.Risk_Probability);
+
         const values = [
             item.Order_ID,
             item.Area,
             item.Vehicle,
-            `${(Number(item.Risk_Probability) * 100).toFixed(2)}%`
+            Number.isFinite(probability)
+                ? `${(probability * 100).toFixed(2)}%`
+                : "N/A"
         ];
 
         values.forEach((value, index) => {
@@ -1677,7 +1607,7 @@ function renderUrgentOrdersTable(items) {
     });
 }
 
-// Tu dong tai du lieu khi chuyen sang Phan 04
+// Tự động tải dữ liệu khi chuyển sang Phần 04
 document.addEventListener("DOMContentLoaded", function () {
     const tabs = document.querySelectorAll(".report-tab");
 
@@ -1695,29 +1625,92 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 // ==========================================
-// PHáº¦N 05 - ÄÃNH GIÃ VÃ€ Tá»I Æ¯U MÃ” HÃŒNH
+// PHẦN 05 - ĐÁNH GIÁ VÀ TỐI ƯU MÔ HÌNH
 // ==========================================
 
-// 1. Dá»® LIá»†U SO SÃNH PRECISION VÃ€ RECALL THEO NGÆ¯á» NG
-
+// 1. Dữ liệu so sánh Precision và Recall theo ngưỡng
 const thresholdData = [
-    { threshold: 0.20, precision: 0.4130952381, recall: 0.9747191011, f1: 0.5802675585 },
-    { threshold: 0.25, precision: 0.4503002001, recall: 0.9480337079, f1: 0.6105834464 },
-    { threshold: 0.30, precision: 0.4907338769, recall: 0.9297752809, f1: 0.6424065987 },
-    { threshold: 0.35, precision: 0.5308134758, recall: 0.9073033708, f1: 0.6697770866 },
-    { threshold: 0.40, precision: 0.5618834081, recall: 0.8799157303, f1: 0.6858237548 },
-    { threshold: 0.45, precision: 0.5961155378, recall: 0.8405898876, f1: 0.6975524476 },
-    { threshold: 0.50, precision: 0.6451247166, recall: 0.7991573034, f1: 0.7139272271 },
-    { threshold: 0.55, precision: 0.6880152188, recall: 0.7619382022, f1: 0.7230923026 },
-    { threshold: 0.60, precision: 0.7163561077, recall: 0.7289325843, f1: 0.7225896276 },
-    { threshold: 0.65, precision: 0.7507788162, recall: 0.6769662921, f1: 0.7119645495 },
-    { threshold: 0.70, precision: 0.7834061135, recall: 0.6299157301, f1: 0.6983261969 },
-    { threshold: 0.75, precision: 0.8136958711, recall: 0.5674157303, f1: 0.6685974348 },
-    { threshold: 0.80, precision: 0.8231213873, recall: 0.5000000000, f1: 0.6221057230 }
+    {
+        threshold: 0.20,
+        precision: 0.4130952381,
+        recall: 0.9747191011,
+        f1: 0.5802675585
+    },
+    {
+        threshold: 0.25,
+        precision: 0.4503002001,
+        recall: 0.9480337079,
+        f1: 0.6105834464
+    },
+    {
+        threshold: 0.30,
+        precision: 0.4907338769,
+        recall: 0.9297752809,
+        f1: 0.6424065987
+    },
+    {
+        threshold: 0.35,
+        precision: 0.5308134758,
+        recall: 0.9073033708,
+        f1: 0.6697770866
+    },
+    {
+        threshold: 0.40,
+        precision: 0.5618834081,
+        recall: 0.8799157303,
+        f1: 0.6858237548
+    },
+    {
+        threshold: 0.45,
+        precision: 0.5961155378,
+        recall: 0.8405898876,
+        f1: 0.6975524476
+    },
+    {
+        threshold: 0.50,
+        precision: 0.6451247166,
+        recall: 0.7991573034,
+        f1: 0.7139272271
+    },
+    {
+        threshold: 0.55,
+        precision: 0.6880152188,
+        recall: 0.7619382022,
+        f1: 0.7230923026
+    },
+    {
+        threshold: 0.60,
+        precision: 0.7163561077,
+        recall: 0.7289325843,
+        f1: 0.7225896276
+    },
+    {
+        threshold: 0.65,
+        precision: 0.7507788162,
+        recall: 0.6769662921,
+        f1: 0.7119645495
+    },
+    {
+        threshold: 0.70,
+        precision: 0.7834061135,
+        recall: 0.6299157301,
+        f1: 0.6983261969
+    },
+    {
+        threshold: 0.75,
+        precision: 0.8136958711,
+        recall: 0.5674157303,
+        f1: 0.6685974348
+    },
+    {
+        threshold: 0.80,
+        precision: 0.8231213873,
+        recall: 0.5000000000,
+        f1: 0.6221057230
+    }
 ];
 
-// 2. Dá»® LIá»†U SO SÃNH CÃC MÃ” HÃŒNH PHÃ‚N LOáº I
-
+// 2. Dữ liệu so sánh các mô hình phân loại
 const modelComparisonData = [
     {
         model: "RandomForest",
@@ -1745,22 +1738,17 @@ const modelComparisonData = [
     }
 ];
 
-
-// 3. HÃ€M Táº¢I DASHBOARD 05
-
+// 3. Hàm tải Dashboard 05
 function loadModelEvaluationDashboard() {
-
     renderThresholdScatterChart();
     renderThresholdOptimizationChart();
     renderModelComparisonChart();
 
-    console.log("Dashboard 05 Ä‘Ã£ táº£i dá»¯ liá»‡u thÃ nh cÃ´ng!");
+    console.log("Dashboard 05 đã tải dữ liệu thành công!");
 }
 
-// 4. BIá»‚U Äá»’ SCATTER PRECISION VÃ€ RECALL
-
+// 4. Biểu đồ Scatter Precision và Recall
 function renderThresholdScatterChart() {
-
     const thresholdColors = [
         "#2196F3",
         "#304FFE",
@@ -1787,149 +1775,120 @@ function renderThresholdScatterChart() {
 
     createChart("thresholdScatterChart", {
         type: "bubble",
-
         data: {
             datasets: [{
                 label: "Probability Threshold",
                 data: scatterData,
-
                 backgroundColor: scatterData.map(item => item.backgroundColor),
                 borderColor: scatterData.map(item => item.backgroundColor),
-
                 hoverRadius: 3
             }]
         },
-
         options: {
             responsive: true,
             maintainAspectRatio: false,
-
             plugins: {
                 legend: {
                     display: false
                 },
-
                 tooltip: {
                     callbacks: {
                         title: function (items) {
                             const item = items[0].raw;
+
                             return "Threshold: " +
                                 (item.threshold * 100).toFixed(0) + "%";
                         },
-
                         label: function (context) {
                             const item = context.raw;
 
                             return [
-                                "Precision: " + (item.x * 100).toFixed(2) + "%",
-                                "Recall: " + (item.y * 100).toFixed(2) + "%"
+                                "Precision: " +
+                                    (item.x * 100).toFixed(2) + "%",
+                                "Recall: " +
+                                    (item.y * 100).toFixed(2) + "%"
                             ];
                         }
                     }
                 }
             },
-
             scales: {
                 x: {
                     min: 0.35,
                     max: 0.90,
-
                     title: {
                         display: true,
                         text: "Precision"
                     },
-
                     ticks: {
-                        callback: value => (value * 100).toFixed(0) + "%"
+                        callback: value =>
+                            (value * 100).toFixed(0) + "%"
                     }
                 },
-
                 y: {
                     min: 0.45,
                     max: 1.05,
-
                     title: {
                         display: true,
                         text: "Recall"
                     },
-
                     ticks: {
-                        callback: value => (value * 100).toFixed(0) + "%"
+                        callback: value =>
+                            (value * 100).toFixed(0) + "%"
                     }
                 }
             }
         }
     });
 }
-
-// 5. BIá»‚U Äá»’ Tá»I Æ¯U HÃ“A NGÆ¯á» NG Cáº¢NH BÃO
-
+// 5. Biểu đồ tối ưu hóa ngưỡng cảnh báo
 function renderThresholdOptimizationChart() {
-
     const labels = thresholdData.map(item =>
         item.threshold.toFixed(2)
     );
 
     createChart("thresholdOptimizationChart", {
-
         type: "line",
-
         data: {
             labels: labels,
-
             datasets: [
                 {
                     label: "Average of Precision",
-
                     data: thresholdData.map(item => item.precision),
-
                     borderColor: "#1689F8",
                     backgroundColor: "#1689F8",
-
                     tension: 0.3,
                     pointRadius: 3
                 },
-
                 {
                     label: "Average of Recall",
-
                     data: thresholdData.map(item => item.recall),
-
                     borderColor: "#172C9B",
                     backgroundColor: "#172C9B",
-
                     tension: 0.3,
                     pointRadius: 3
                 },
-
                 {
                     label: "Average of F1",
-
                     data: thresholdData.map(item => item.f1),
-
                     borderColor: "#F36B32",
                     backgroundColor: "#F36B32",
-
                     tension: 0.3,
                     pointRadius: 3
                 }
             ]
         },
-
         options: {
             responsive: true,
             maintainAspectRatio: false,
-
             interaction: {
                 mode: "index",
                 intersect: false
             },
-
             plugins: {
                 legend: {
                     position: "bottom"
                 },
-
                 tooltip: {
                     callbacks: {
                         label: function (context) {
@@ -1939,7 +1898,6 @@ function renderThresholdOptimizationChart() {
                     }
                 }
             },
-
             scales: {
                 x: {
                     title: {
@@ -1947,13 +1905,12 @@ function renderThresholdOptimizationChart() {
                         text: "Probability Threshold"
                     }
                 },
-
                 y: {
                     min: 0.3,
                     max: 1.0,
-
                     ticks: {
-                        callback: value => (value * 100).toFixed(0) + "%"
+                        callback: value =>
+                            (value * 100).toFixed(0) + "%"
                     }
                 }
             }
@@ -1961,75 +1918,51 @@ function renderThresholdOptimizationChart() {
     });
 }
 
-// 6. BIá»‚U Äá»’ SO SÃNH CÃC MÃ” HÃŒNH MACHINE LEARNING
-
+// 6. Biểu đồ so sánh các mô hình Machine Learning
 function renderModelComparisonChart() {
-
     createChart("modelComparisonChart", {
-
         type: "bar",
-
         data: {
             labels: modelComparisonData.map(item => item.model),
-
             datasets: [
                 {
                     label: "Average of Accuracy",
-
                     data: modelComparisonData.map(item => item.accuracy),
-
                     backgroundColor: "#1689F8"
                 },
-
                 {
                     label: "Average of Precision",
-
                     data: modelComparisonData.map(item => item.precision),
-
                     backgroundColor: "#172C9B"
                 },
-
                 {
                     label: "Average of Recall",
-
                     data: modelComparisonData.map(item => item.recall),
-
                     backgroundColor: "#F36B32"
                 },
-
                 {
                     label: "Average of F1",
-
                     data: modelComparisonData.map(item => item.f1),
-
                     backgroundColor: "#8E44AD"
                 },
-
                 {
                     label: "Average of ROC_AUC",
-
                     data: modelComparisonData.map(item => item.roc_auc),
-
                     backgroundColor: "#E83EAD"
                 }
             ]
         },
-
         options: {
             indexAxis: "y",
-
             responsive: true,
             maintainAspectRatio: false,
-
             interaction: {
                 mode: "index",
                 intersect: false
             },
-
             plugins: {
                 legend: {
                     position: "bottom",
-
                     labels: {
                         boxWidth: 10,
                         font: {
@@ -2037,7 +1970,6 @@ function renderModelComparisonChart() {
                         }
                     }
                 },
-
                 tooltip: {
                     callbacks: {
                         label: function (context) {
@@ -2047,17 +1979,15 @@ function renderModelComparisonChart() {
                     }
                 }
             },
-
             scales: {
                 x: {
                     min: 0,
                     max: 1,
-
                     ticks: {
-                        callback: value => (value * 100).toFixed(0) + "%"
+                        callback: value =>
+                            (value * 100).toFixed(0) + "%"
                     }
                 },
-
                 y: {
                     ticks: {
                         font: {
@@ -2070,72 +2000,69 @@ function renderModelComparisonChart() {
     });
 }
 
-// 7. Tá»° Äá»˜NG Táº¢I KHI CHUYá»‚N SANG PHáº¦N 05
-
+// 7. Tự động tải khi chuyển sang Phần 05
 document.addEventListener("DOMContentLoaded", function () {
-
     const tabs = document.querySelectorAll(".report-tab");
 
     tabs.forEach(tab => {
-
         tab.addEventListener("click", function () {
-
             if (this.dataset.target === "section5") {
-
                 loadModelEvaluationDashboard();
-
             }
-
         });
-
     });
-
 });
 
-// 9. Khá»Ÿi cháº¡y Dashboard
+// 8. Khởi chạy Dashboard
 document.addEventListener("DOMContentLoaded", loadDashboard);
 
-// 10. CHUYEN DOI GIUA 5 PHAN DASHBOARD
+// 9. Chuyển đổi giữa 5 phần Dashboard
 document.addEventListener("DOMContentLoaded", function () {
-
     const tabs = document.querySelectorAll(".report-tab");
     const sections = document.querySelectorAll(".report-section");
 
     tabs.forEach(tab => {
         tab.addEventListener("click", async function () {
-
             const targetId = this.dataset.target;
 
-            // An tat ca cac phan
+            // Ẩn tất cả các phần
             sections.forEach(section => {
                 section.classList.add("d-none");
             });
 
-            // Hien phan duoc chon
+            // Hiện phần được chọn
             const targetSection = document.getElementById(targetId);
 
             if (targetSection) {
                 targetSection.classList.remove("d-none");
             }
-            // Neu chuyen sang Phan 03 thi tai du lieu
+
+            // Nếu chuyển sang Phần 03 thì tải dữ liệu
             if (targetId === "section3") {
-            const token = localStorage.getItem("token");
+                const token = localStorage.getItem("token");
 
-            const startInput = document.getElementById("area3StartDate");
-            const endInput = document.getElementById("area3EndDate");
+                const startInput =
+                    document.getElementById("area3StartDate");
 
-            if (startInput && !startInput.value) {
-                startInput.value = "2022-02-11";
+                const endInput =
+                    document.getElementById("area3EndDate");
+
+                if (startInput && !startInput.value) {
+                    startInput.value = "2022-02-11";
+                }
+
+                if (endInput && !endInput.value) {
+                    endInput.value = "2022-04-06";
+                }
+
+                initArea3Filters();
+
+                if (token) {
+                    await loadAreaVehicleDashboard(token);
+                }
             }
 
-            if (endInput && !endInput.value) {
-                endInput.value = "2022-04-06";
-            }
-
-            initArea3Filters(token);
-            await loadAreaVehicleDashboard(token);
-            }
-            // Cap nhat trang thai nut
+            // Cập nhật trạng thái nút
             tabs.forEach(button => {
                 button.classList.remove("btn-primary", "active");
                 button.classList.add("btn-outline-primary");
@@ -2143,8 +2070,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
             this.classList.remove("btn-outline-primary");
             this.classList.add("btn-primary", "active");
-
         });
     });
-
 });
